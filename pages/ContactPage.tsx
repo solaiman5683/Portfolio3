@@ -21,9 +21,9 @@ const ContactPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen selection:bg-primary-500 selection:text-black">
       <Navbar />
-      <main className="pt-32">
+      <main className="pt-28">
         <Contact profile={profile} />
       </main>
       <Footer profile={profile} />

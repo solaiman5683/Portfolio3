@@ -42,9 +42,9 @@ const Portfolio: React.FC = () => {
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen selection:bg-primary-500 selection:text-black">
       <Navbar />
-      <main className="pt-32">
+      <main className="pt-28">
         <Projects projects={projects} />
       </main>
       <Footer profile={profile} />

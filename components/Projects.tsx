@@ -116,28 +116,28 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
   }, [selectedProject, handleNext, handlePrev, isLightboxOpen]);
 
   return (
-    <section id="projects" className="py-32 bg-background">
+    <section id="projects" className="py-section bg-background">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-20">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-16">
           <div>
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="inline-block px-4 py-1.5 rounded-md border border-primary-500/20 bg-primary-500/5 text-primary-500 text-[10px] font-bold tracking-widest uppercase mb-6"
-            >
-              Portfolio
-            </motion.div>
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
+            <motion.span
+              initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-4xl md:text-5xl font-extrabold text-white tracking-tighter"
+              className="inline-block px-4 py-1.5 rounded-full border border-primary-500/25 bg-primary-500/10 text-primary-500 text-[11px] font-semibold tracking-widest uppercase mb-6"
             >
-              Featured Creations
+              Portfolio
+            </motion.span>
+            <motion.h2
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="font-display text-display-xl font-bold text-white tracking-tight"
+            >
+              Featured work
             </motion.h2>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             {categories.map((cat, idx) => (
               <motion.button
@@ -147,10 +147,10 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => setFilter(cat)}
-                className={`px-6 py-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all duration-300 border ${
-                  filter === cat 
-                    ? 'bg-primary-500 text-black border-primary-500 shadow-xl' 
-                    : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
+                className={`px-5 py-2.5 rounded-xl text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 border ${
+                  filter === cat
+                    ? 'bg-primary-500 text-black border-primary-500'
+                    : 'bg-surface text-slate-500 border-white/[0.06] hover:border-white/15 hover:text-slate-300'
                 }`}
               >
                 {cat}
@@ -159,61 +159,67 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          <AnimatePresence mode='popLayout'>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <AnimatePresence mode="popLayout">
             {displayedProjects.map((project, index) => (
               <motion.div
                 key={project.id}
                 layout
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true, margin: '-40px' }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.45, delay: index * 0.08 }}
                 onClick={() => {
                   setSelectedProject(project);
                   setCurrentImgIndex(0);
                 }}
-                className="group cursor-pointer bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-primary-500/50 transition-all duration-500 relative aspect-[4/3]"
+                className="group cursor-pointer bg-surface border border-white/[0.06] rounded-2xl overflow-hidden hover:border-primary-500/30 transition-all duration-500 relative aspect-[4/3]"
               >
-                <div className="w-full h-full overflow-hidden bg-slate-900">
-                  <img 
-                    src={project.image_url} 
-                    alt={project.title} 
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0" 
+                <div className="w-full h-full overflow-hidden bg-surface-elevated">
+                  <img
+                    src={project.image_url}
+                    alt={project.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                   />
                 </div>
-
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-10 backdrop-blur-[2px]">
-                   <div className="transform translate-y-8 group-hover:translate-y-0 transition-transform duration-500 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase text-primary-500 tracking-widest bg-black/50 px-3 py-1 rounded-md backdrop-blur-md border border-white/10">{project.category}</span>
-                      </div>
-                      <h3 className="text-3xl font-black text-white leading-tight">{project.title}</h3>
-                      <div className="pt-4 flex items-center gap-2 text-primary-500 font-black text-[9px] uppercase tracking-[0.2em]">
-                        View Details <ArrowUpRight size={14} />
-                      </div>
-                   </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8">
+                  <div className="transform translate-y-6 group-hover:translate-y-0 transition-transform duration-400 space-y-3">
+                    <span className="text-[10px] font-semibold uppercase text-primary-500 tracking-wider">
+                      {project.category}
+                    </span>
+                    <h3 className="font-display text-2xl font-semibold text-white leading-tight">{project.title}</h3>
+                    <div className="pt-2 flex items-center gap-2 text-primary-500 text-[11px] font-semibold uppercase tracking-wider">
+                      View project <ArrowUpRight size={14} />
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
 
-        {isHomePage && hasMore && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+        {isHomePage && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-20 flex justify-end"
+            className="mt-14 flex flex-wrap gap-4 justify-center md:justify-end"
           >
-            <button 
-              onClick={() => navigate('/portfolio')}
-              className="group px-10 py-5 bg-white/5 border border-white/10 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-4 hover:bg-primary-500 hover:text-black hover:border-primary-500 transition-all duration-500 shadow-2xl active:scale-95"
+            {hasMore && (
+              <button
+                onClick={() => navigate('/portfolio')}
+                className="group px-6 py-3 bg-surface border border-white/10 text-white rounded-xl font-semibold text-sm flex items-center gap-2 hover:border-primary-500/40 hover:text-primary-500 transition-all"
+              >
+                View all projects <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/contact')}
+              className="px-6 py-3 bg-primary-500 text-black rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-primary-400 transition-colors shadow-glow"
             >
-              View All Projects 
-              <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform duration-300" />
+              Start a project <ArrowRight size={16} />
             </button>
           </motion.div>
         )}
