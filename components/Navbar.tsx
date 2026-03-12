@@ -63,7 +63,7 @@ const Navbar: React.FC = () => {
             ))}
             <Link
               to="/contact"
-              className="font-body text-sm font-semibold text-[var(--_theme---base--surface--surface)] bg-[var(--_theme---accent)] px-5 py-2.5 rounded-full hover:bg-[var(--_theme---accent--hover)] transition-colors"
+              className="font-body text-sm font-semibold text-black bg-white px-5 py-2.5 rounded-full hover:bg-white/90 transition-colors"
             >
               Start a project
             </Link>
@@ -116,7 +116,7 @@ const Navbar: React.FC = () => {
                 <Link
                   to="/contact"
                   onClick={() => setIsOpen(false)}
-                  className="block w-full py-4 text-center font-body text-sm font-semibold text-[var(--_theme---base--surface--surface)] bg-[var(--_theme---accent)] rounded-full hover:bg-[var(--_theme---accent--hover)] transition-colors"
+                  className="block w-full py-4 text-center font-body text-sm font-semibold text-black bg-white rounded-full hover:bg-white/90 transition-colors"
                 >
                   Start a project
                 </Link>
