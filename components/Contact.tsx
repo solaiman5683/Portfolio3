@@ -67,11 +67,11 @@ const Contact: React.FC<ContactProps> = ({ profile }) => {
       {/* Solid background */}
       <div className="absolute inset-0 -z-10 bg-background" />
       {/* BG image: very low opacity — subtle texture only */}
-      <div
+      {/* <div
         className="absolute inset-0 -z-[5] bg-cover bg-center bg-no-repeat opacity-[0.05]"
         style={{ backgroundImage: `url(${UNSPLASH_IMAGE})` }}
         aria-hidden
-      />
+      /> */}
 
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-0">
         <div className="text-center mb-14 sm:mb-16">
@@ -156,7 +156,7 @@ const Contact: React.FC<ContactProps> = ({ profile }) => {
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-surface p-8 md:p-10 rounded-3xl border border-white/[0.08] shadow-xl shadow-black/30"
+              className="bg-surface backdrop-blur p-8 md:p-10 rounded-3xl border border-white/[0.08] shadow-xl shadow-black/30"
             >
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
