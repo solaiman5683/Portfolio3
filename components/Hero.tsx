@@ -186,15 +186,17 @@ const Hero: React.FC<HeroProps> = ({ profile, socials }) => {
                           Watch intro
                         </button>
                       </DialogTrigger>
-                      <DialogContent open={isVideoOpen} onOpenChange={setIsVideoOpen}>
-                        <iframe
-                          src={getEmbedUrl(profile.video_url)}
-                          className="w-full h-full"
-                          title="Intro reel"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
+                      <DialogContent className="max-w-5xl p-0 bg-black border border-white/10 overflow-hidden">
+                        <div className="aspect-video w-full">
+                          <iframe
+                            src={getEmbedUrl(profile.video_url)}
+                            className="w-full h-full"
+                            title="Intro reel"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
                       </DialogContent>
                     </Dialog>
                   )}
