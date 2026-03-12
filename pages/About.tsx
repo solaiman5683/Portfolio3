@@ -50,7 +50,7 @@ const About: React.FC = () => {
   const displayImage = profile?.about_image_url || profile?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1000';
 
   return (
-    <div className="bg-background min-h-screen selection:bg-primary-500 selection:text-black">
+    <div className="bg-background min-h-screen">
       <Navbar />
       <main className="pt-28">
         <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-section">

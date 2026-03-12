@@ -90,6 +90,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Selection: readable on dark UI */
+::selection {
+  background: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+::-moz-selection {
+  background: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
 #root {
   min-height: 100vh;
 }

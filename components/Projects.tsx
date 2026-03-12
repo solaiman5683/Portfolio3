@@ -199,17 +199,19 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                   </div>
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/98 via-background/65 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="absolute inset-x-0 bottom-0 p-6 sm:p-7 opacity-0 group-hover:opacity-100 transition-all duration-500">
                   <div className="transform translate-y-3 group-hover:translate-y-0 transition-transform duration-500">
-                    <span className="text-[10px] font-semibold uppercase text-primary-500 tracking-wider">
-                      {project.category}
-                    </span>
-                    <h3 className="mt-2 font-title text-2xl sm:text-[1.7rem] font-semibold text-white leading-tight">
-                      {project.title}
-                    </h3>
-                    <div className="mt-3 inline-flex items-center gap-2 text-primary-500 text-[11px] font-semibold uppercase tracking-wider">
-                      View details <ArrowUpRight size={14} />
+                    <div className="rounded-2xl bg-black/55 backdrop-blur-md border border-white/10 p-5 sm:p-6 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.85)]">
+                      <span className="text-[10px] font-semibold uppercase text-primary-400 tracking-wider">
+                        {project.category}
+                      </span>
+                      <h3 className="mt-2 font-title text-2xl sm:text-[1.7rem] font-semibold text-white leading-tight">
+                        {project.title}
+                      </h3>
+                      <div className="mt-3 inline-flex items-center gap-2 text-primary-300 text-[11px] font-semibold uppercase tracking-wider">
+                        View details <ArrowUpRight size={14} />
+                      </div>
                     </div>
                   </div>
                 </div>
