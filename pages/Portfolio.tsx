@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Projects from '../components/Projects';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, Project } from '../types';
 
 const Portfolio: React.FC = () => {
@@ -14,20 +14,14 @@ const Portfolio: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [p, pr, imgs] = await Promise.all([
-          supabase.from('profile').select('*').maybeSingle(),
-          supabase.from('projects').select('*').order('created_at', { ascending: false }),
-          supabase.from('project_images').select('*')
+        const [p, projsWithGallery] = await Promise.all([
+          api.getProfile(),
+          api.list<Project>('projects'),
         ]);
-        
-        if (p.data) setProfile(p.data);
-        
-        if (pr.data) {
-          const galleryImgs = imgs.data || [];
-          const projsWithGallery = pr.data.map((project: any) => ({
-            ...project,
-            gallery: galleryImgs.filter((img: any) => img.project_id === project.id)
-          }));
+
+        setProfile(p as unknown as Profile);
+
+        if (projsWithGallery) {
           setProjects(projsWithGallery);
         }
       } catch (err) {

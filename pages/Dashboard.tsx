@@ -1,19 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X, Upload, Loader2, Share2, Award, FileText, Globe, History, Layers, Cpu, Star, AlertCircle, ExternalLink, Calendar, MapPin, Video, Image as ImageIcon, Tag, Link as LinkIcon, AlertTriangle
+  User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X, Upload, Loader2, Share2, Award, FileText, Globe, History, Layers, Cpu, Star, ExternalLink, Tag, Link as LinkIcon
 } from 'lucide-react';
 import { Project, Skill, Profile, ContactMessage, Service, Testimonial, SocialLink, WhyChooseMe, TimelineEntry, BlogPost, ProjectCategory } from '../types';
 import toast from 'react-hot-toast';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onLogout: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [tableMissing, setTableMissing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -37,59 +40,59 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchData();
     if (activeTab === 'projects' || activeTab === 'categories') {
-       fetchCategories();
+      fetchCategories();
     }
   }, [activeTab]);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('project_categories').select('*').order('name');
-    if (data) setCategories(data);
+    try {
+      const data = await api.list<ProjectCategory>('project_categories');
+      setCategories(data);
+    } catch {}
   };
 
   const fetchData = async () => {
     setLoading(true);
-    setTableMissing(false);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        navigate('/admin');
-        return;
-      }
-
-      const fetchMap: any = {
-        profile: () => supabase.from('profile').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-        socials: () => supabase.from('social_links').select('*'),
-        skills: () => supabase.from('skills').select('*').order('name', { ascending: true }),
-        services: () => supabase.from('services').select('*').order('title', { ascending: true }),
-        projects: () => supabase.from('projects').select('*, gallery:project_images(*)').order('created_at', { ascending: false }),
-        categories: () => supabase.from('project_categories').select('*').order('name', { ascending: true }),
-        blogs: () => supabase.from('blogs').select('*').order('created_at', { ascending: false }),
-        testimonials: () => supabase.from('testimonials').select('*'),
-        messages: () => supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
-        why: () => supabase.from('why_choose_me').select('*').order('order_index', { ascending: true }),
-        timeline: () => supabase.from('timeline').select('*').order('order_index', { ascending: true }),
+      const tableMap: Record<string, string> = {
+        profile: 'profile',
+        socials: 'social_links',
+        skills: 'skills',
+        services: 'services',
+        projects: 'projects',
+        categories: 'project_categories',
+        blogs: 'blogs',
+        testimonials: 'testimonials',
+        messages: 'contact_messages',
+        why: 'why_choose_me',
+        timeline: 'timeline',
       };
 
-      if (fetchMap[activeTab]) {
-        const { data, error } = await fetchMap[activeTab]();
-        if (error) {
-          if (error.code === '42P01') setTableMissing(true);
-          else throw error;
-        }
-        if (activeTab === 'profile') setProfile(data || {} as Profile);
-        if (activeTab === 'socials') setSocials(data || []);
-        if (activeTab === 'skills') setSkills(data || []);
-        if (activeTab === 'services') setServices(data || []);
-        if (activeTab === 'timeline') setTimeline(data || []);
-        if (activeTab === 'blogs') setBlogs(data || []);
-        if (activeTab === 'projects') setProjects(data || []);
-        if (activeTab === 'categories') setCategories(data || []);
-        if (activeTab === 'testimonials') setTestimonials(data || []);
-        if (activeTab === 'messages') setMessages(data || []);
-        if (activeTab === 'why') setWhyChooseMe(data || []);
+      const apiTable = tableMap[activeTab];
+      if (!apiTable) return;
+
+      if (activeTab === 'profile') {
+        const data = await api.getProfile();
+        setProfile(data as unknown as Profile);
+      } else {
+        const data = await api.list<any>(apiTable);
+        if (activeTab === 'socials') setSocials(data);
+        if (activeTab === 'skills') setSkills(data);
+        if (activeTab === 'services') setServices(data);
+        if (activeTab === 'timeline') setTimeline(data);
+        if (activeTab === 'blogs') setBlogs(data);
+        if (activeTab === 'projects') setProjects(data);
+        if (activeTab === 'categories') setCategories(data);
+        if (activeTab === 'testimonials') setTestimonials(data);
+        if (activeTab === 'messages') setMessages(data);
+        if (activeTab === 'why') setWhyChooseMe(data);
       }
     } catch (err: any) {
-      toast.error(err.message || "Fetch failed");
+      if (err.message === 'Unauthorized') {
+        navigate('/admin');
+      } else {
+        toast.error(err.message || "Fetch failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -105,9 +108,7 @@ const Dashboard: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) throw error;
-      
+      await api.delete(table, id);
       toast.success("Record deleted");
       setDeleteConfirmId(null);
       fetchData();
@@ -125,20 +126,12 @@ const Dashboard: React.FC = () => {
 
     setUploading(true);
     try {
+      const bucket = activeTab === 'blogs' ? 'blog' : 'portfolio';
       const uploadedUrls: string[] = [];
-      const bucketName = activeTab === 'blogs' ? 'Blog' : 'Portfolio';
-      
+
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `uploads/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-        uploadedUrls.push(data.publicUrl);
+        const url = await api.upload(files[i], bucket);
+        uploadedUrls.push(url);
       }
 
       if (isProfile && profile) {
@@ -156,58 +149,61 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    try {
+      await api.updateProfile(profile as unknown as Record<string, unknown>);
+      toast.success("Identity Saved");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleSubmitItem = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      const tableMap: any = { 
+      const tableMap: Record<string, string> = {
         skills: 'skills', projects: 'projects', blogs: 'blogs',
-        services: 'services', testimonials: 'testimonials', socials: 'social_links', 
+        services: 'services', testimonials: 'testimonials', socials: 'social_links',
         why: 'why_choose_me', timeline: 'timeline', categories: 'project_categories'
       };
-      
+
       const payload = { ...currentItem };
       const { id, created_at, gallery, ...savePayload } = payload;
-      
+
       if (activeTab === 'projects' && typeof savePayload.tech_stack === 'string') {
-        savePayload.tech_stack = (savePayload.tech_stack as string).split(',').map(s => s.trim()).filter(Boolean);
+        savePayload.tech_stack = (savePayload.tech_stack as string).split(',').map((s: string) => s.trim()).filter(Boolean);
       }
 
-      if (isEditing) {
-        const { error } = await supabase.from(tableMap[activeTab]).update(savePayload).eq('id', id);
-        if (error) throw error;
-        
-        if (activeTab === 'projects' && savePayload.gallery_type === 'image') {
-          await supabase.from('project_images').delete().eq('project_id', id);
-          if (galleryImages.length > 0) {
-            const galleryPayload = galleryImages.map(url => ({ project_id: id, image_url: url }));
-            await supabase.from('project_images').insert(galleryPayload);
-          }
-        }
-      } else {
-        const { data, error } = await supabase.from(tableMap[activeTab]).insert([savePayload]).select().single();
-        if (error) throw error;
-        
-        if (activeTab === 'projects' && savePayload.gallery_type === 'image' && galleryImages.length > 0) {
-          const galleryPayload = galleryImages.map(url => ({ project_id: data.id, image_url: url }));
-          await supabase.from('project_images').insert(galleryPayload);
-        }
+      if (activeTab === 'projects') {
+        savePayload.gallery = galleryImages.map(url => ({ image_url: url }));
       }
-      
+
+      const tableName = tableMap[activeTab];
+
+      if (isEditing) {
+        await api.update(tableName, id, savePayload);
+      } else {
+        await api.create(tableName, savePayload);
+      }
+
       toast.success("Synchronized successfully");
       setIsModalOpen(false);
       setGalleryImages([]);
       fetchData();
       if (activeTab === 'categories') fetchCategories();
-    } catch (err: any) { 
-      toast.error(err.message); 
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    api.logout();
+    onLogout();
     navigate('/admin');
   };
 
@@ -228,7 +224,7 @@ const Dashboard: React.FC = () => {
     switch(activeTab) {
       case 'profile':
         return profile && (
-          <form onSubmit={(e) => { e.preventDefault(); supabase.from('profile').upsert(profile).then(() => toast.success("Identity Saved")); }} className="bg-[#0a0a0a] p-12 rounded-[40px] border border-white/5 space-y-10">
+          <form onSubmit={handleProfileSave} className="bg-[#0a0a0a] p-12 rounded-[40px] border border-white/5 space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">NAME</label>

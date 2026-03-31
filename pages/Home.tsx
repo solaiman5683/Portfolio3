@@ -9,7 +9,7 @@ import WhyChooseMe from '../components/WhyChooseMe';
 import Testimonials from '../components/Testimonials';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, Skill, Project, SocialLink, Service, Testimonial, WhyChooseMe as WhyChooseMeType } from '../types';
 
 const Home: React.FC = () => {
@@ -25,35 +25,24 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const results = await Promise.all([
-          supabase.from('profile').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-          supabase.from('skills').select('*').order('percentage', { ascending: false }),
-          supabase.from('projects').select('*').order('created_at', { ascending: false }),
-          supabase.from('social_links').select('*'),
-          supabase.from('services').select('*'),
-          supabase.from('why_choose_me').select('*').order('order_index', { ascending: true }),
-          supabase.from('testimonials').select('*'),
-          supabase.from('project_images').select('*') // Fetch gallery images
+        const [prof, sk, proj, soc, serv, why, test] = await Promise.all([
+          api.getProfile(),
+          api.list<Skill>('skills'),
+          api.list<Project>('projects'),
+          api.list<SocialLink>('social_links'),
+          api.list<Service>('services'),
+          api.list<WhyChooseMeType>('why_choose_me'),
+          api.list<Testimonial>('testimonials'),
         ]);
 
-        const [prof, sk, proj, soc, serv, why, test, imgs] = results;
-
-        if (prof.data) setProfile(prof.data);
-        if (sk.data) setSkills(sk.data);
-        if (soc.data) setSocials(soc.data);
-        if (serv.data) setServices(serv.data);
-        if (why.data) setWhyChooseMe(why.data);
-        if (test.data) setTestimonials(test.data);
-
-        if (proj.data) {
-          const galleryImgs = imgs.data || [];
-          const projsWithGallery = proj.data.map((p: any) => ({
-            ...p,
-            gallery: galleryImgs.filter((img: any) => img.project_id === p.id)
-          }));
-          setProjects(projsWithGallery);
-        }
-
+        setProfile(prof as unknown as Profile);
+        setSkills(sk);
+        setSocials(soc);
+        setServices(serv);
+        setWhyChooseMe(why);
+        setTestimonials(test);
+        // projects already include gallery from backend
+        setProjects(proj);
       } catch (err) {
         console.error("Critical Sync Error:", err);
       } finally {

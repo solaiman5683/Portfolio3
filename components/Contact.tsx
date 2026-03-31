@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, SocialLink } from '../types';
 import toast from 'react-hot-toast';
 
@@ -25,17 +25,14 @@ const Contact: React.FC<ContactProps> = ({ profile }) => {
   });
 
   useEffect(() => {
-    supabase.from('social_links').select('*').then(({ data }) => {
-      if (data) setSocials(data);
-    });
+    api.list<SocialLink>('social_links').then(data => setSocials(data)).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.from('contact_messages').insert([formData]);
-      if (error) throw error;
+      await api.create('contact_messages', formData as unknown as Record<string, unknown>);
       toast.success('Message sent successfully!');
       setSuccess(true);
       setFormData({ name: '', email: '', subject: '', message: '' });

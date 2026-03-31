@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { supabase } from './lib/supabase';
+import { api } from './lib/api';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackgroundLights from './components/BackgroundLights';
@@ -62,22 +62,18 @@ const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const App: React.FC = () => {
   const [isDark, setIsDark] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') setIsDark(false);
     else setIsDark(true);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    api.isLoggedIn().then(loggedIn => {
+      setIsLoggedIn(loggedIn);
+      setAuthChecked(true);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -91,6 +87,8 @@ const App: React.FC = () => {
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(!isDark);
+
+  if (!authChecked) return null;
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
@@ -108,8 +106,8 @@ const App: React.FC = () => {
               <Route path="/blog" element={<PageTransition><Blog /></PageTransition>} />
               <Route path="/blog/:id" element={<PageTransition><BlogPostDetail /></PageTransition>} />
               <Route path="/contact" element={<PageTransition><ContactPage /></PageTransition>} />
-              <Route path="/admin" element={session ? <Navigate to="/dashboard" /> : <PageTransition><AdminLogin /></PageTransition>} />
-              <Route path="/dashboard/*" element={session ? <PageTransition><Dashboard /></PageTransition> : <Navigate to="/admin" />} />
+              <Route path="/admin" element={isLoggedIn ? <Navigate to="/dashboard" /> : <PageTransition><AdminLogin onLogin={() => setIsLoggedIn(true)} /></PageTransition>} />
+              <Route path="/dashboard/*" element={isLoggedIn ? <PageTransition><Dashboard onLogout={() => setIsLoggedIn(false)} /></PageTransition> : <Navigate to="/admin" />} />
             </Routes>
           </AnimatePresence>
         </Suspense>

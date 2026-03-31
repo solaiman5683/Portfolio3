@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import Services from '../components/Services';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, Service } from '../types';
 import { motion } from 'framer-motion';
 import { Search, PenTool, Terminal, Rocket, CheckCircle2, Zap, Shield, Target } from 'lucide-react';
@@ -18,11 +18,11 @@ const ServicesPage: React.FC = () => {
     const fetchData = async () => {
       try {
         const [p, s] = await Promise.all([
-          supabase.from('profile').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-          supabase.from('services').select('*').order('title', { ascending: true })
+          api.getProfile(),
+          api.list<Service>('services'),
         ]);
-        if (p.data) setProfile(p.data);
-        if (s.data) setServices(s.data);
+        setProfile(p as unknown as Profile);
+        setServices(s);
       } catch (err) {
         console.error(err);
       } finally {

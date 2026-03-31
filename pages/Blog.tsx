@@ -3,7 +3,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, BlogPost } from '../types';
 import { Loader2, Calendar, Clock } from 'lucide-react';
 
@@ -17,12 +17,12 @@ const Blog: React.FC = () => {
     const fetchData = async () => {
       try {
         const [profileRes, blogsRes] = await Promise.all([
-          supabase.from('profile').select('*').maybeSingle(),
-          supabase.from('blogs').select('*').order('created_at', { ascending: false })
+          api.getProfile(),
+          api.list<BlogPost>('blogs'),
         ]);
 
-        if (profileRes.data) setProfile(profileRes.data);
-        if (blogsRes.data) setBlogs(blogsRes.data);
+        setProfile(profileRes as unknown as Profile);
+        setBlogs(blogsRes);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Profile, SocialLink } from '../types';
 import * as LucideIcons from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail, Phone, MapPin } from 'lucide-react';
 
@@ -15,9 +15,7 @@ const Footer: React.FC<FooterProps> = ({ profile }) => {
   const [socials, setSocials] = useState<SocialLink[]>([]);
 
   useEffect(() => {
-    supabase.from('social_links').select('*').then(({ data }) => {
-      if (data) setSocials(data);
-    });
+    api.list<SocialLink>('social_links').then(data => setSocials(data)).catch(() => {});
   }, []);
 
   const SocialIcon = ({ name }: { name: string }) => {

@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const AdminLogin: React.FC = () => {
+interface AdminLoginProps {
+  onLogin: () => void;
+}
+
+const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,8 +20,9 @@ const AdminLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { token } = await api.login(email, password);
+      api.saveToken(token);
+      onLogin();
       toast.success("Welcome back, Admin!");
       navigate('/dashboard');
     } catch (err: any) {

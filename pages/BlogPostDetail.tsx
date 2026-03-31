@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { BlogPost, Profile } from '../types';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -24,18 +24,12 @@ const BlogPostDetail: React.FC = () => {
       
       try {
         const [postRes, profileRes] = await Promise.all([
-          supabase.from('blogs').select('*').eq('id', id).maybeSingle(),
-          supabase.from('profile').select('*').maybeSingle()
+          api.get<BlogPost>('blogs', id),
+          api.getProfile(),
         ]);
 
-        if (postRes.error) throw postRes.error;
-        if (!postRes.data) {
-          setError('Article not found');
-          return;
-        }
-
-        setPost(postRes.data);
-        if (profileRes.data) setProfile(profileRes.data);
+        setPost(postRes);
+        setProfile(profileRes as unknown as Profile);
       } catch (err: any) {
         console.error('Error fetching post:', err);
         setError(err.message || 'Failed to load article');

@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import Skills from '../components/Skills';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile, Skill, TimelineEntry } from '../types';
 import { motion } from 'framer-motion';
 import { Building2, GraduationCap, Briefcase, Calendar, Award, Users, Coffee } from 'lucide-react';
@@ -19,13 +19,13 @@ const About: React.FC = () => {
     const fetchData = async () => {
       try {
         const [p, s, t] = await Promise.all([
-          supabase.from('profile').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-          supabase.from('skills').select('*').order('percentage', { ascending: false }),
-          supabase.from('timeline').select('*').order('order_index', { ascending: true })
+          api.getProfile(),
+          api.list<Skill>('skills'),
+          api.list<TimelineEntry>('timeline'),
         ]);
-        if (p.data) setProfile(p.data);
-        if (s.data) setSkills(s.data);
-        if (t.data) setTimeline(t.data);
+        setProfile(p as unknown as Profile);
+        setSkills(s);
+        setTimeline(t);
       } catch (err) {
         console.error("About Page Fetch Error:", err);
       } finally {

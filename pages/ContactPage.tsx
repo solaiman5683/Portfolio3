@@ -3,21 +3,14 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Profile } from '../types';
 
 const ContactPage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    supabase.from('profile')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setProfile(data);
-      });
+    api.getProfile().then(data => setProfile(data as unknown as Profile)).catch(() => {});
   }, []);
 
   return (
