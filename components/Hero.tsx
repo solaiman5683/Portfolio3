@@ -39,7 +39,7 @@ const Hero: React.FC<HeroProps> = ({ profile, socials }) => {
     }, 2200);
     return () => window.clearInterval(t);
   }, [rotatingRoles.length]);
-  const avatarUrl = profile?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1000';
+  const avatarUrl = profile?.avatar_url || '';
 
   const SocialIcon = ({ name }: { name: string }) => {
     const Icon = (LucideIcons as any)[name] || LucideIcons.Link2;

@@ -85,7 +85,9 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => {
-            const featureList = service.features?.split(',').map((f) => f.trim()).filter(Boolean) || [];
+            const featureList = Array.isArray(service.features)
+              ? service.features
+              : service.features?.split(',').map((f: string) => f.trim()).filter(Boolean) || [];
             const meta = getServiceMeta(service.title);
             return (
               <motion.div

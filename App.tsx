@@ -1,12 +1,19 @@
 
 import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { api } from './lib/api';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackgroundLights from './components/BackgroundLights';
-import CustomCursor from './components/CustomCursor';
 import ScrollToTop from './components/ScrollToTop';
+
+// BackgroundLights only on public portfolio pages, NOT on admin/dashboard
+const PublicOnlyEffects: React.FC = () => {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
+  if (isAdmin) return null;
+  return <BackgroundLights />;
+};
 
 // Lazy loading pages for better performance
 const Home = React.lazy(() => import('./pages/Home'));
@@ -92,9 +99,8 @@ const App: React.FC = () => {
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-      <HashRouter>
-        <CustomCursor />
-        <BackgroundLights />
+      <BrowserRouter>
+        <PublicOnlyEffects />
         <ScrollToTop />
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
@@ -111,7 +117,7 @@ const App: React.FC = () => {
             </Routes>
           </AnimatePresence>
         </Suspense>
-      </HashRouter>
+      </BrowserRouter>
       <Toaster position="bottom-right" />
     </ThemeContext.Provider>
   );

@@ -1,16 +1,213 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X, Upload, Loader2, Share2, Award, FileText, Globe, History, Layers, Cpu, Star, ExternalLink, Tag, Link as LinkIcon
+import * as LucideIcons from 'lucide-react';
+import {
+  User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X,
+  Upload, Loader2, Share2, Award, FileText, Globe, History, Layers,
+  Cpu, Star, Tag, Link as LinkIcon, Search
 } from 'lucide-react';
-import { Project, Skill, Profile, ContactMessage, Service, Testimonial, SocialLink, WhyChooseMe, TimelineEntry, BlogPost, ProjectCategory } from '../types';
+import {
+  Project, Skill, Profile, ContactMessage, Service, Testimonial,
+  SocialLink, WhyChooseMe, TimelineEntry, BlogPost, ProjectCategory
+} from '../types';
 import toast from 'react-hot-toast';
 
-interface DashboardProps {
-  onLogout: () => void;
-}
+// ── Curated icon list for picker ──────────────────────────────────────────────
+const ICON_GROUPS: { label: string; icons: string[] }[] = [
+  { label: 'Social & Platforms', icons: [
+    'Github','Twitter','Linkedin','Youtube','Instagram','Facebook','Globe','Mail',
+    'Phone','ExternalLink','Link','Link2','AtSign','Rss','Twitch','Slack','Discord',
+    'Dribbble','Figma','Framer','Codepen','GitBranch','GitCommit','GitMerge','GitPullRequest',
+  ]},
+  { label: 'People', icons: [
+    'User','Users','UserCircle','UserPlus','UserCheck','UserX','Contact','BadgeCheck',
+  ]},
+  { label: 'Navigation & Arrows', icons: [
+    'Home','ArrowRight','ArrowLeft','ArrowUp','ArrowDown','ArrowUpRight','ArrowDownRight',
+    'ChevronRight','ChevronLeft','ChevronDown','ChevronUp','ChevronsRight','MoveRight',
+    'CornerDownRight','Navigation','Compass','Map','MapPin','Route',
+  ]},
+  { label: 'UI & Controls', icons: [
+    'Plus','Minus','Check','X','Hash','Menu','MoreHorizontal','MoreVertical',
+    'Search','Filter','SlidersHorizontal','Settings','Settings2','Wrench','ToggleLeft',
+    'Bell','BellRing','Bookmark','BookmarkPlus','Flag','Star','Heart','ThumbsUp','ThumbsDown',
+  ]},
+  { label: 'Media', icons: [
+    'Image','Images','Camera','CameraOff','Video','VideoOff','Film','Clapperboard',
+    'Music','Headphones','Mic','MicOff','Volume','Volume2','VolumeX','Play','Pause',
+    'StopCircle','SkipForward','SkipBack','Repeat','Shuffle','Radio',
+  ]},
+  { label: 'Design & Creative', icons: [
+    'Palette','Pen','PenTool','Brush','Paintbrush','Eraser','Scissors','Crop',
+    'Layers','Layout','LayoutGrid','LayoutList','Columns','Rows','Grid2x2','Grid3x3',
+    'Maximize','Minimize','Expand','Shrink','Focus','Aperture','Contrast',
+  ]},
+  { label: 'Code & Tech', icons: [
+    'Code','Code2','Terminal','SquareTerminal','FileCode','FileCode2','Braces',
+    'Database','Server','Cloud','CloudUpload','CloudDownload','HardDrive','Cpu','MemoryStick',
+    'Monitor','Laptop','Smartphone','Tablet','Tv','Printer','Keyboard','Mouse',
+    'Wifi','Bluetooth','Usb','Nfc','Signal','Globe2','Binary',
+  ]},
+  { label: 'Files & Documents', icons: [
+    'File','FileText','FilePlus','FileMinus','FileCheck','FileX','FileImage','FileVideo',
+    'Folder','FolderOpen','FolderPlus','FolderMinus','Archive','Package','Package2','Box',
+    'BookOpen','Book','BookMarked','Notebook','ClipboardList','Clipboard','Copy',
+  ]},
+  { label: 'Communication', icons: [
+    'MessageSquare','MessageCircle','MessageSquarePlus','MessagesSquare',
+    'Send','SendHorizontal','Inbox','MailOpen','MailPlus','Reply','Forward',
+  ]},
+  { label: 'Business & Work', icons: [
+    'Briefcase','Building','Building2','Factory','Landmark','Store',
+    'Award','Trophy','Medal','Target','TrendingUp','TrendingDown','BarChart','BarChart2',
+    'PieChart','LineChart','Activity','Gauge','Percent','DollarSign','CreditCard',
+    'ShoppingCart','ShoppingBag','Receipt','Wallet','Banknote','Coins',
+  ]},
+  { label: 'Time & Calendar', icons: [
+    'Clock','Clock2','Clock3','Timer','TimerReset','Alarm','Calendar','CalendarDays',
+    'CalendarCheck','CalendarPlus','CalendarClock','Watch','Hourglass',
+  ]},
+  { label: 'Security', icons: [
+    'Shield','ShieldCheck','ShieldAlert','ShieldX','Lock','Unlock','Key','KeyRound',
+    'Eye','EyeOff','Fingerprint','Scan','ScanFace','QrCode','Barcode',
+  ]},
+  { label: 'Actions & Tools', icons: [
+    'Download','Upload','Share','Share2','RefreshCw','RotateCcw','RotateCw',
+    'Trash','Trash2','Edit','Edit2','Pencil','Save','SaveAll',
+    'Undo','Redo','ZoomIn','ZoomOut','Move','Grab','Hand',
+  ]},
+  { label: 'Nature & Fun', icons: [
+    'Sun','Moon','SunMoon','CloudRain','Cloud','Wind','Droplets','Snowflake',
+    'Feather','Leaf','Flower','Flower2','TreePine','TreeDeciduous','Mountain',
+    'Flame','Zap','Sparkles','Stars','Wand2','Lightbulb','Rocket',
+  ]},
+  { label: 'Alerts & Status', icons: [
+    'Info','AlertCircle','AlertTriangle','AlertOctagon','HelpCircle','XCircle','CheckCircle',
+    'Plug','PlugZap','Power','PowerOff','RefreshCcw','Loader','Loader2','Waypoints',
+  ]},
+  { label: 'Typography & Layout', icons: [
+    'Type','AlignLeft','AlignCenter','AlignRight','Bold','Italic','Underline','Strikethrough',
+    'List','ListOrdered','ListChecks','Table','TableProperties','LayoutDashboard',
+  ]},
+];
+
+const ICON_LIST = ICON_GROUPS.flatMap(g => g.icons);
+
+const IconPicker: React.FC<{
+  value: string;
+  onChange: (name: string) => void;
+}> = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dropRect, setDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        dropRef.current && !dropRef.current.contains(e.target as Node)
+      ) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setOpen(o => !o);
+  };
+
+  const filteredGroups = query
+    ? [{ label: 'Results', icons: ICON_LIST.filter(n => n.toLowerCase().includes(query.toLowerCase())) }]
+    : ICON_GROUPS;
+
+  const SelectedIcon = value ? (LucideIcons as any)[value] : null;
+
+  const IconBtn = ({ name }: { name: string }) => {
+    const Icon = (LucideIcons as any)[name];
+    if (!Icon) return null;
+    return (
+      <button
+        type="button"
+        title={name}
+        onClick={() => { onChange(name); setOpen(false); setQuery(''); }}
+        className={`flex items-center justify-center p-2 rounded-lg transition-colors ${
+          value === name ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+        }`}
+      >
+        <Icon size={16} />
+      </button>
+    );
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={handleOpen}
+        className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+      >
+        {SelectedIcon
+          ? <><SelectedIcon size={16} className="text-blue-600 shrink-0" /><span className="font-medium">{value}</span></>
+          : <span className="text-gray-400">Select icon…</span>
+        }
+        <LucideIcons.ChevronDown size={14} className="ml-auto text-gray-400" />
+      </button>
+
+      {open && dropRect && (
+        <div
+          ref={dropRef}
+          style={{ position: 'fixed', top: dropRect.top, left: dropRect.left, width: dropRect.width, zIndex: 9999 }}
+          className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden"
+        >
+          <div className="p-2 border-b border-gray-100 flex items-center gap-2 sticky top-0 bg-white">
+            <Search size={14} className="text-gray-400 shrink-0" />
+            <input
+              autoFocus
+              className="flex-1 text-sm outline-none placeholder-gray-400"
+              placeholder="Search icons…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            {query && <button type="button" onClick={() => setQuery('')}><X size={13} className="text-gray-400" /></button>}
+          </div>
+          <div className="max-h-64 overflow-y-auto p-2 space-y-3">
+            {filteredGroups.map(group => {
+              const valid = group.icons.filter(n => (LucideIcons as any)[n]);
+              if (!valid.length) return null;
+              return (
+                <div key={group.label}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 px-1">{group.label}</p>
+                  <div className="grid grid-cols-8 gap-0.5">
+                    {valid.map(name => <IconBtn key={name} name={name} />)}
+                  </div>
+                </div>
+              );
+            })}
+            {filteredGroups[0]?.icons.length === 0 && (
+              <p className="text-center text-xs text-gray-400 py-4">No icons found</p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+interface DashboardProps { onLogout: () => void; }
+
+const inp = 'w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white';
+const card = 'bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow';
+const iconBtn = 'p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors';
+const delBtn = (active: boolean) => `p-2 rounded-lg transition-colors ${active ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`;
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -21,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const navigate = useNavigate();
-  
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -33,47 +230,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [socials, setSocials] = useState<SocialLink[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
-  
   const [currentItem, setCurrentItem] = useState<any>({});
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
-    if (activeTab === 'projects' || activeTab === 'categories') {
-      fetchCategories();
-    }
+    if (activeTab === 'projects' || activeTab === 'categories') fetchCategories();
   }, [activeTab]);
 
   const fetchCategories = async () => {
-    try {
-      const data = await api.list<ProjectCategory>('project_categories');
-      setCategories(data);
-    } catch {}
+    try { setCategories(await api.list<ProjectCategory>('project_categories')); } catch {}
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const tableMap: Record<string, string> = {
-        profile: 'profile',
-        socials: 'social_links',
-        skills: 'skills',
-        services: 'services',
-        projects: 'projects',
-        categories: 'project_categories',
-        blogs: 'blogs',
-        testimonials: 'testimonials',
-        messages: 'contact_messages',
-        why: 'why_choose_me',
-        timeline: 'timeline',
+        profile: 'profile', socials: 'social_links', skills: 'skills',
+        services: 'services', projects: 'projects', categories: 'project_categories',
+        blogs: 'blogs', testimonials: 'testimonials', messages: 'contact_messages',
+        why: 'why_choose_me', timeline: 'timeline',
       };
-
       const apiTable = tableMap[activeTab];
       if (!apiTable) return;
-
       if (activeTab === 'profile') {
-        const data = await api.getProfile();
-        setProfile(data as unknown as Profile);
+        setProfile((await api.getProfile()) as unknown as Profile);
       } else {
         const data = await api.list<any>(apiTable);
         if (activeTab === 'socials') setSocials(data);
@@ -88,76 +269,52 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         if (activeTab === 'why') setWhyChooseMe(data);
       }
     } catch (err: any) {
-      if (err.message === 'Unauthorized') {
-        navigate('/admin');
-      } else {
-        toast.error(err.message || "Fetch failed");
-      }
-    } finally {
-      setLoading(false);
-    }
+      if (err.message === 'Unauthorized') navigate('/admin');
+      else toast.error(err.message || 'Fetch failed');
+    } finally { setLoading(false); }
   };
 
   const deleteItem = async (table: string, id: string) => {
     if (deleteConfirmId !== id) {
       setDeleteConfirmId(id);
-      toast("Click again to confirm delete", { icon: '⚠️' });
+      toast('Click again to confirm delete', { icon: '⚠️' });
       setTimeout(() => setDeleteConfirmId(null), 3000);
       return;
     }
-
     setIsProcessing(true);
     try {
       await api.delete(table, id);
-      toast.success("Record deleted");
+      toast.success('Deleted');
       setDeleteConfirmId(null);
       fetchData();
       if (table === 'project_categories') fetchCategories();
     } catch (err: any) {
       toast.error(`Delete failed: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
+    } finally { setIsProcessing(false); }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, field: string, isProfile: boolean = false, isGallery: boolean = false) => {
-    const files = event.target.files;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string, isProfile = false, isGallery = false) => {
+    const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setUploading(true);
     try {
       const bucket = activeTab === 'blogs' ? 'blog' : 'portfolio';
-      const uploadedUrls: string[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const url = await api.upload(files[i], bucket);
-        uploadedUrls.push(url);
-      }
-
-      if (isProfile && profile) {
-        setProfile({ ...profile, [field]: uploadedUrls[0] });
-      } else if (isGallery) {
-        setGalleryImages(prev => [...prev, ...uploadedUrls]);
-      } else {
-        setCurrentItem((prev: any) => ({ ...prev, [field]: uploadedUrls[0] }));
-      }
-      toast.success("Assets uploaded.");
-    } catch (error: any) {
-      toast.error(`Upload failed: ${error.message}`);
-    } finally {
-      setUploading(false);
-    }
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) urls.push(await api.upload(files[i], bucket));
+      if (isProfile && profile) setProfile({ ...profile, [field]: urls[0] });
+      else if (isGallery) setGalleryImages(prev => [...prev, ...urls]);
+      else setCurrentItem((prev: any) => ({ ...prev, [field]: urls[0] }));
+      toast.success('Uploaded');
+    } catch (err: any) {
+      toast.error(`Upload failed: ${err.message}`);
+    } finally { setUploading(false); }
   };
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    try {
-      await api.updateProfile(profile as unknown as Record<string, unknown>);
-      toast.success("Identity Saved");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    try { await api.updateProfile(profile as unknown as Record<string, unknown>); toast.success('Saved'); }
+    catch (err: any) { toast.error(err.message); }
   };
 
   const handleSubmitItem = async (e: React.FormEvent) => {
@@ -165,487 +322,410 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     setIsProcessing(true);
     try {
       const tableMap: Record<string, string> = {
-        skills: 'skills', projects: 'projects', blogs: 'blogs',
-        services: 'services', testimonials: 'testimonials', socials: 'social_links',
-        why: 'why_choose_me', timeline: 'timeline', categories: 'project_categories'
+        skills: 'skills', projects: 'projects', blogs: 'blogs', services: 'services',
+        testimonials: 'testimonials', socials: 'social_links', why: 'why_choose_me',
+        timeline: 'timeline', categories: 'project_categories',
       };
-
-      const payload = { ...currentItem };
-      const { id, created_at, gallery, ...savePayload } = payload;
-
-      if (activeTab === 'projects' && typeof savePayload.tech_stack === 'string') {
-        savePayload.tech_stack = (savePayload.tech_stack as string).split(',').map((s: string) => s.trim()).filter(Boolean);
-      }
-
+      const { id, created_at, gallery, ...savePayload } = { ...currentItem };
       if (activeTab === 'projects') {
+        if (typeof savePayload.tech_stack === 'string') {
+          savePayload.tech_stack = savePayload.tech_stack.split(',').map((s: string) => s.trim()).filter(Boolean);
+        } else if (!Array.isArray(savePayload.tech_stack)) {
+          savePayload.tech_stack = [];
+        }
+      }
+      if (activeTab === 'projects')
         savePayload.gallery = galleryImages.map(url => ({ image_url: url }));
-      }
-
       const tableName = tableMap[activeTab];
-
-      if (isEditing) {
-        await api.update(tableName, id, savePayload);
-      } else {
-        await api.create(tableName, savePayload);
-      }
-
-      toast.success("Synchronized successfully");
+      if (isEditing) await api.update(tableName, id, savePayload);
+      else await api.create(tableName, savePayload);
+      toast.success('Saved');
       setIsModalOpen(false);
       setGalleryImages([]);
       fetchData();
       if (activeTab === 'categories') fetchCategories();
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err: any) { toast.error(err.message); }
+    finally { setIsProcessing(false); }
   };
 
-  const handleLogout = () => {
-    api.logout();
-    onLogout();
-    navigate('/admin');
-  };
+  const handleLogout = () => { api.logout(); onLogout(); navigate('/admin'); };
 
   const openModal = (item: any = {}) => {
-    setCurrentItem({ gallery_type: 'image', ...item });
+    setCurrentItem({ gallery_type: 'image', type: 'experience', order_index: 0, ...item });
     setIsEditing(!!item.id);
-    if (activeTab === 'projects' && item.gallery) {
-      setGalleryImages(item.gallery.map((g: any) => g.image_url));
-    } else {
-      setGalleryImages([]);
-    }
+    setGalleryImages(activeTab === 'projects' && item.gallery ? item.gallery.map((g: any) => g.image_url) : []);
     setIsModalOpen(true);
   };
 
+  const UploadField = ({ field, label, isProfile = false }: { field: string; label: string; isProfile?: boolean }) => {
+    const currentUrl = isProfile ? (profile as any)?.[field] : currentItem[field];
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
+        <label className="flex items-center gap-3 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+          {uploading ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Upload size={16} className="text-gray-400" />}
+          <span className="text-sm text-gray-500">{currentUrl ? 'Change image' : 'Upload image'}</span>
+          {currentUrl && <img src={currentUrl} className="w-8 h-8 rounded object-cover ml-auto border border-gray-200" />}
+          <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, field, isProfile)} />
+        </label>
+      </div>
+    );
+  };
+
   const renderContent = () => {
-    if (loading && !uploading && !isModalOpen) return <div className="flex justify-center py-40"><Loader2 className="animate-spin text-primary-500" size={64} /></div>;
-    
-    switch(activeTab) {
-      case 'profile':
-        return profile && (
-          <form onSubmit={handleProfileSave} className="bg-[#0a0a0a] p-12 rounded-[40px] border border-white/5 space-y-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">NAME</label>
-                <input className="w-full bg-[#111] p-5 rounded-xl border-none text-white outline-none font-medium" placeholder="Full Name" value={profile.name || ''} onChange={e => setProfile({...profile, name: e.target.value})} />
+    if (loading && !isModalOpen) return (
+      <div className="flex justify-center items-center py-32">
+        <Loader2 className="animate-spin text-blue-500" size={40} />
+      </div>
+    );
+
+    switch (activeTab) {
+      case 'profile': return profile && (
+        <form onSubmit={handleProfileSave} className="bg-white border border-gray-200 rounded-xl p-8 space-y-6 shadow-sm max-w-3xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Name</label><input className={inp} value={profile.name || ''} onChange={e => setProfile({ ...profile, name: e.target.value })} placeholder="Full Name" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input className={inp} value={profile.title || ''} onChange={e => setProfile({ ...profile, title: e.target.value })} placeholder="Professional Title" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email</label><input className={inp} type="email" value={profile.email || ''} onChange={e => setProfile({ ...profile, email: e.target.value })} placeholder="email@example.com" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Phone</label><input className={inp} value={profile.phone || ''} onChange={e => setProfile({ ...profile, phone: e.target.value })} placeholder="+1 234 567 890" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Location</label><input className={inp} value={profile.location || ''} onChange={e => setProfile({ ...profile, location: e.target.value })} placeholder="City, Country" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Resume URL</label><input className={inp} value={profile.resume_url || ''} onChange={e => setProfile({ ...profile, resume_url: e.target.value })} placeholder="https://..." /></div>
+          </div>
+          <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bio</label><textarea className={`${inp} h-32 resize-none`} value={profile.bio || ''} onChange={e => setProfile({ ...profile, bio: e.target.value })} placeholder="Tell your story..." /></div>
+          <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">About Headline</label><input className={inp} value={profile.about_headline || ''} onChange={e => setProfile({ ...profile, about_headline: e.target.value })} /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UploadField field="avatar_url" label="Avatar Photo" isProfile />
+            <UploadField field="about_image_url" label="About Page Image" isProfile />
+          </div>
+          <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Save Profile</button>
+        </form>
+      );
+
+      case 'skills': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {skills.map(s => (
+            <div key={s.id} className={card}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center"><Cpu size={18} className="text-blue-600" /></div>
+                <div><p className="font-semibold text-gray-800 text-sm">{s.name}</p><p className="text-xs text-gray-400">{s.category} · {s.percentage}%</p></div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">TITLE</label>
-                <input className="w-full bg-[#111] p-5 rounded-xl border-none text-white outline-none font-medium" placeholder="Professional Title" value={profile.title || ''} onChange={e => setProfile({...profile, title: e.target.value})} />
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(s)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === s.id)} onClick={() => deleteItem('skills', s.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case 'socials': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {socials.map(s => (
+            <div key={s.id} className={card}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center"><LinkIcon size={18} className="text-purple-600" /></div>
+                <div><p className="font-semibold text-gray-800 text-sm">{s.platform}</p><p className="text-xs text-gray-400 truncate max-w-[140px]">{s.url}</p></div>
+              </div>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(s)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === s.id)} onClick={() => deleteItem('social_links', s.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case 'categories': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categories.map(c => (
+            <div key={c.id} className={card}>
+              <div className="flex items-center gap-3"><Tag size={18} className="text-orange-500" /><p className="font-semibold text-gray-800 text-sm">{c.name}</p></div>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(c)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === c.id)} onClick={() => deleteItem('project_categories', c.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case 'services': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {services.map(s => (
+            <div key={s.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mb-3"><Layers size={18} className="text-green-600" /></div>
+              <p className="font-semibold text-gray-800 mb-1">{s.title}</p>
+              <p className="text-xs text-gray-400 line-clamp-2 mb-4">{s.description}</p>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(s)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === s.id)} onClick={() => deleteItem('services', s.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case 'projects': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {projects.map(p => (
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              {p.image_url && <img src={p.image_url} className="w-full h-40 object-cover" alt={p.title} />}
+              <div className="p-4">
+                <p className="font-semibold text-gray-800 mb-1">{p.title}</p>
+                <p className="text-xs text-gray-400 mb-3">{p.category}</p>
+                <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(p)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === p.id)} onClick={() => deleteItem('projects', p.id)}><Trash2 size={16}/></button></div>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">BIO</label>
-              <textarea className="w-full bg-[#111] p-6 rounded-2xl border-none text-white h-48 outline-none resize-none font-medium" placeholder="Tell your story..." value={profile.bio || ''} onChange={e => setProfile({...profile, bio: e.target.value})} />
+          ))}
+        </div>
+      );
+
+      case 'blogs': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {blogs.map(b => (
+            <div key={b.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              {b.image_url && <img src={b.image_url} className="w-full h-36 object-cover" />}
+              <div className="p-4">
+                <p className="font-semibold text-gray-800 mb-1 line-clamp-1">{b.title}</p>
+                <p className="text-xs text-gray-400 mb-3">{b.category} · {b.read_time}</p>
+                <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(b)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === b.id)} onClick={() => deleteItem('blogs', b.id)}><Trash2 size={16}/></button></div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">AVATAR IMAGE</label>
-                 <label className="w-full cursor-pointer bg-[#111] border border-white/5 text-slate-400 p-5 rounded-xl flex items-center justify-between transition-all hover:bg-white/5">
-                    <div className="flex items-center gap-3">
-                      {uploading ? <Loader2 size={16} className="animate-spin text-primary-500" /> : <Upload size={16} />}
-                      <span className="text-[10px] font-black uppercase tracking-widest">{profile.avatar_url ? 'IMAGE READY' : 'UPLOAD PHOTO'}</span>
-                    </div>
-                    {profile.avatar_url && <img src={profile.avatar_url} className="w-8 h-8 rounded-lg object-cover border border-white/10" />}
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'avatar_url', true)} />
-                 </label>
-               </div>
-               <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">ABOUT PAGE IMAGE</label>
-                 <label className="w-full cursor-pointer bg-[#111] border border-white/5 text-slate-400 p-5 rounded-xl flex items-center justify-between transition-all hover:bg-white/5">
-                    <div className="flex items-center gap-3">
-                      {uploading ? <Loader2 size={16} className="animate-spin text-primary-500" /> : <Upload size={16} />}
-                      <span className="text-[10px] font-black uppercase tracking-widest">{profile.about_image_url ? 'IMAGE READY' : 'UPLOAD PHOTO'}</span>
-                    </div>
-                    {profile.about_image_url && <img src={profile.about_image_url} className="w-8 h-8 rounded-lg object-cover border border-white/10" />}
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'about_image_url', true)} />
-                 </label>
-               </div>
+          ))}
+        </div>
+      );
+
+      case 'timeline': return (
+        <div className="space-y-3 max-w-2xl">
+          {timeline.map(t => (
+            <div key={t.id} className={card}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${t.type === 'experience' ? 'bg-blue-50' : 'bg-indigo-50'}`}>
+                  {t.type === 'experience' ? <Briefcase size={18} className="text-blue-600" /> : <History size={18} className="text-indigo-600" />}
+                </div>
+                <div><p className="font-semibold text-gray-800 text-sm">{t.title}</p><p className="text-xs text-gray-400">{t.institution} · {t.period}</p></div>
+              </div>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(t)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === t.id)} onClick={() => deleteItem('timeline', t.id)}><Trash2 size={16}/></button></div>
             </div>
-            <button type="submit" className="px-12 py-6 bg-primary-500 text-black rounded-3xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary-500/30 transition-all active:scale-95">SAVE IDENTITY</button>
-          </form>
-        );
+          ))}
+        </div>
+      );
 
-      case 'skills':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {skills.map(skill => (
-              <div key={skill.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex items-center justify-between group hover:border-primary-500/20 transition-all">
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-primary-500">
-                    <Cpu size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white">{skill.name}</h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">{skill.category}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openModal(skill)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('skills', skill.id)} className={`p-2 transition-colors ${deleteConfirmId === skill.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
+      case 'why': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {whyChooseMe.map(w => (
+            <div key={w.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center mb-3"><Award size={18} className="text-yellow-600" /></div>
+              <p className="font-semibold text-gray-800 mb-1">{w.title}</p>
+              <p className="text-xs text-gray-400 mb-4">{w.description}</p>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(w)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === w.id)} onClick={() => deleteItem('why_choose_me', w.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case 'testimonials': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {testimonials.map(t => (
+            <div key={t.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                {t.photo_url && <img src={t.photo_url} className="w-10 h-10 rounded-full object-cover border border-gray-200" />}
+                <div><p className="font-semibold text-gray-800 text-sm">{t.name}</p><p className="text-xs text-blue-500">{t.role}</p></div>
               </div>
-            ))}
-          </div>
-        );
+              <p className="text-xs text-gray-500 italic line-clamp-3 mb-4">"{t.text}"</p>
+              <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(t)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === t.id)} onClick={() => deleteItem('testimonials', t.id)}><Trash2 size={16}/></button></div>
+            </div>
+          ))}
+        </div>
+      );
 
-      case 'socials':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {socials.map(link => (
-              <div key={link.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex items-center justify-between group hover:border-primary-500/20 transition-all">
-                <div className="flex items-center gap-5">
-                  <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-primary-500">
-                    <LinkIcon size={18} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white">{link.platform}</h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest truncate max-w-[120px]">{link.url}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openModal(link)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('social_links', link.id)} className={`p-2 transition-colors ${deleteConfirmId === link.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
+      case 'messages': return (
+        <div className="space-y-3 max-w-3xl">
+          {messages.map(m => (
+            <div key={m.id} className={`bg-white border rounded-xl p-5 shadow-sm ${m.is_read ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}>
+              <div className="flex justify-between items-start mb-2">
+                <div><p className="font-semibold text-gray-800">{m.name} <span className="text-blue-500 font-normal text-sm">— {m.email}</span></p><p className="text-xs text-gray-400">{new Date(m.created_at).toLocaleDateString()}</p></div>
+                <button className={delBtn(deleteConfirmId === m.id)} onClick={() => deleteItem('contact_messages', m.id)}><Trash2 size={16}/></button>
               </div>
-            ))}
-          </div>
-        );
+              <p className="text-sm font-semibold text-gray-700 mb-1">{m.subject}</p>
+              <p className="text-sm text-gray-500">{m.message}</p>
+            </div>
+          ))}
+          {messages.length === 0 && <p className="text-gray-400 text-sm text-center py-16">No messages yet.</p>}
+        </div>
+      );
 
-      case 'blogs':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {blogs.map(post => (
-              <div key={post.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex flex-col group transition-all">
-                <div className="w-full h-40 bg-black rounded-3xl overflow-hidden mb-6">
-                  <img src={post.image_url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-4 line-clamp-1">{post.title}</h3>
-                <div className="flex justify-between items-center mt-auto">
-                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{post.category}</span>
-                   <div className="flex gap-2">
-                      <button onClick={() => openModal(post)} className="p-3 bg-white/5 rounded-xl text-slate-400 hover:text-white"><Edit size={16}/></button>
-                      <button onClick={() => deleteItem('blogs', post.id)} className={`p-3 rounded-xl transition-all ${deleteConfirmId === post.id ? 'bg-red-500 text-white' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'}`}><Trash2 size={16}/></button>
-                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'services':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map(service => (
-              <div key={service.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex flex-col group transition-all">
-                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-primary-500 mb-6">
-                  <Layers size={22} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
-                <p className="text-slate-500 text-xs line-clamp-2 mb-6">{service.description}</p>
-                <div className="flex gap-2 mt-auto">
-                  <button onClick={() => openModal(service)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('services', service.id)} className={`p-2 transition-colors ${deleteConfirmId === service.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'timeline':
-        return (
-          <div className="space-y-4">
-            {timeline.map(entry => (
-              <div key={entry.id} className="bg-slate-900 p-6 rounded-3xl border border-white/5 flex items-center justify-between group">
-                <div className="flex items-center gap-5">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${entry.type === 'experience' ? 'bg-primary-500/10 text-primary-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                    {entry.type === 'experience' ? <Briefcase size={18}/> : <History size={18}/>}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white">{entry.title}</h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">{entry.institution} | {entry.period}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openModal(entry)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('timeline', entry.id)} className={`p-2 transition-colors ${deleteConfirmId === entry.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'why':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {whyChooseMe.map(item => (
-              <div key={item.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 group">
-                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-primary-500 mb-6">
-                  <Award size={22} />
-                </div>
-                <h4 className="font-bold text-white mb-2">{item.title}</h4>
-                <p className="text-slate-500 text-xs mb-6">{item.description}</p>
-                <div className="flex gap-2">
-                  <button onClick={() => openModal(item)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('why_choose_me', item.id)} className={`p-2 transition-colors ${deleteConfirmId === item.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'testimonials':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map(t => (
-              <div key={t.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex flex-col group transition-all">
-                <div className="flex items-center gap-4 mb-6">
-                  <img src={t.photo_url} className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <h4 className="font-bold text-white text-sm">{t.name}</h4>
-                    <p className="text-[10px] text-primary-500 uppercase tracking-widest">{t.role}</p>
-                  </div>
-                </div>
-                <p className="text-slate-500 text-xs italic mb-8 line-clamp-3">"{t.text}"</p>
-                <div className="flex gap-2 mt-auto">
-                  <button onClick={() => openModal(t)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('testimonials', t.id)} className={`p-2 transition-colors ${deleteConfirmId === t.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'messages':
-        return (
-          <div className="space-y-4">
-            {messages.map(msg => (
-              <div key={msg.id} className={`p-8 rounded-[40px] border transition-all ${msg.is_read ? 'bg-slate-950 border-white/5' : 'bg-slate-900 border-primary-500/20'}`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-bold text-white">{msg.name}</h4>
-                    <p className="text-xs text-primary-500">{msg.email}</p>
-                  </div>
-                  <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{new Date(msg.created_at).toLocaleDateString()}</span>
-                </div>
-                <h5 className="text-sm font-bold text-slate-300 mb-2">{msg.subject}</h5>
-                <p className="text-slate-500 text-sm leading-relaxed mb-6">{msg.message}</p>
-                <button onClick={() => deleteItem('contact_messages', msg.id)} className="text-red-500 hover:text-red-400 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                  <Trash2 size={14} /> Remove Message
-                </button>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'categories':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map(cat => (
-              <div key={cat.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex items-center justify-between group hover:border-primary-500/20 transition-all">
-                <div className="flex items-center gap-5">
-                  <Tag size={20} className="text-primary-500" />
-                  <h4 className="font-bold text-white">{cat.name}</h4>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openModal(cat)} className="p-2 text-slate-500 hover:text-white"><Edit size={18}/></button>
-                  <button onClick={() => deleteItem('project_categories', cat.id)} className={`p-2 transition-colors ${deleteConfirmId === cat.id ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}><Trash2 size={18}/></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'projects':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {projects.map(p => (
-              <div key={p.id} className="bg-slate-900 p-8 rounded-[40px] border border-white/5 flex flex-col group transition-all">
-                <div className="w-full h-48 bg-black rounded-3xl overflow-hidden mb-6">
-                  <img src={p.image_url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" alt={p.title} />
-                </div>
-                <h3 className="text-2xl font-black text-white mb-4">{p.title}</h3>
-                <div className="flex justify-between items-center mt-auto">
-                   <div className="flex gap-2">
-                      <button onClick={() => openModal(p)} className="p-3 bg-white/5 rounded-xl text-slate-400 hover:text-white"><Edit size={18}/></button>
-                      <button onClick={() => deleteItem('projects', p.id)} className={`p-3 rounded-xl transition-all ${deleteConfirmId === p.id ? 'bg-red-500 text-white' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'}`}><Trash2 size={18}/></button>
-                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-
-      default:
-        return <div className="py-20 text-center text-slate-600 font-bold uppercase tracking-widest text-xs">Accessing System...</div>;
+      default: return null;
     }
   };
 
+  const navItems = [
+    { id: 'profile', icon: <User size={16}/>, label: 'Profile' },
+    { id: 'socials', icon: <Share2 size={16}/>, label: 'Social Links' },
+    { id: 'categories', icon: <Tag size={16}/>, label: 'Categories' },
+    { id: 'skills', icon: <Cpu size={16}/>, label: 'Skills' },
+    { id: 'projects', icon: <Briefcase size={16}/>, label: 'Projects' },
+    { id: 'blogs', icon: <FileText size={16}/>, label: 'Blog' },
+    { id: 'services', icon: <Layers size={16}/>, label: 'Services' },
+    { id: 'timeline', icon: <History size={16}/>, label: 'Timeline' },
+    { id: 'why', icon: <Award size={16}/>, label: 'Why Me' },
+    { id: 'testimonials', icon: <Star size={16}/>, label: 'Testimonials' },
+    { id: 'messages', icon: <MessageSquare size={16}/>, label: 'Messages' },
+  ];
+
+  const tabLabel = navItems.find(n => n.id === activeTab)?.label ?? activeTab;
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row text-slate-100 antialiased font-sans">
-      <aside className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-8 flex flex-col h-screen sticky top-0 z-40">
-        <div className="mb-12 px-2 flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center font-black text-black text-sm">A</div>
-          <h1 className="text-xl font-black text-white uppercase tracking-tighter">Admin Panel</h1>
+    <div className="dashboard-root min-h-screen bg-gray-50 flex text-gray-800 font-sans">
+      {/* Sidebar */}
+      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0 shrink-0">
+        <div className="px-5 py-5 border-b border-gray-100 flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">A</div>
+          <span className="font-bold text-gray-800">Admin Panel</span>
         </div>
-        <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
-          {[
-            { id: 'profile', icon: <User size={18}/>, label: 'Identity' },
-            { id: 'socials', icon: <Share2 size={18}/>, label: 'Links' },
-            { id: 'categories', icon: <Tag size={18}/>, label: 'Categories' },
-            { id: 'skills', icon: <Cpu size={18}/>, label: 'Skills' },
-            { id: 'projects', icon: <Briefcase size={18}/>, label: 'Portfolio' },
-            { id: 'blogs', icon: <FileText size={18}/>, label: 'Blog' },
-            { id: 'services', icon: <Layers size={18}/>, label: 'Services' },
-            { id: 'timeline', icon: <History size={18}/>, label: 'Timeline' },
-            { id: 'why', icon: <Award size={18}/>, label: 'Why Me' },
-            { id: 'testimonials', icon: <Star size={18}/>, label: 'Reviews' },
-            { id: 'messages', icon: <MessageSquare size={18}/>, label: 'Inbox' }
-          ].map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${activeTab === item.id ? 'bg-primary-500 text-black font-bold shadow-lg shadow-primary-500/20' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>
-              {item.icon} <span className="text-[10px] uppercase font-black tracking-widest">{item.label}</span>
+
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                activeTab === item.id
+                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}
+            >
+              {item.icon}
+              {item.label}
             </button>
           ))}
         </nav>
-        <div className="mt-8 pt-8 border-t border-white/5">
-           <Link to="/" className="w-full flex items-center gap-4 px-5 py-4 text-slate-400 font-bold text-[10px] uppercase tracking-widest"><Globe size={18}/> View Site</Link>
-           <button onClick={handleLogout} className="w-full px-5 py-4 text-red-500 font-bold flex items-center gap-3 text-[10px] uppercase tracking-widest"><LogOut size={18}/> Disconnect</button>
+
+        <div className="px-3 py-4 border-t border-gray-100 space-y-0.5">
+          <Link to="/" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors">
+            <Globe size={16}/> View Site
+          </Link>
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors">
+            <LogOut size={16}/> Logout
+          </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-        <div className="flex justify-between items-end mb-12">
-          <h2 className="text-5xl font-black capitalize text-white tracking-tighter">{activeTab.replace('_', ' ')}</h2>
+      {/* Main */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="px-8 py-6 border-b border-gray-200 bg-white flex items-center justify-between sticky top-0 z-10">
+          <h1 className="text-xl font-bold text-gray-800">{tabLabel}</h1>
           {activeTab !== 'profile' && activeTab !== 'messages' && (
-            <button onClick={() => openModal()} className="px-8 py-4 bg-primary-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:shadow-primary-500/20 shadow-xl">
-              <Plus size={18} /> New Entry
+            <button onClick={() => openModal()} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+              <Plus size={16}/> Add New
             </button>
           )}
         </div>
-        {renderContent()}
+
+        <div className="p-8">
+          {renderContent()}
+        </div>
       </main>
 
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
-           <div className="bg-[#0a0a0a] w-full max-w-lg rounded-[40px] border border-white/10 p-12 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
-              <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-3 bg-white/5 text-slate-500 hover:text-white rounded-full"><X size={20}/></button>
-              
-              <div className="mb-10">
-                <span className="text-primary-500 text-[10px] font-black uppercase tracking-[0.3em] block mb-2">SYSTEM MODAL</span>
-                <h3 className="text-3xl font-black text-white">{isEditing ? 'Modify' : 'Create'} {activeTab === 'projects' ? 'Project' : activeTab.replace('s', '')}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800">{isEditing ? 'Edit' : 'Add'} {tabLabel}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18}/></button>
+            </div>
+
+            <form onSubmit={handleSubmitItem} className="p-6 space-y-4">
+              {activeTab === 'projects' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} placeholder="Project title" value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label>
+                  <select required className={inp} value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})}>
+                    <option value="">Select category</option>
+                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Media Type</label>
+                  <select className={inp} value={currentItem.gallery_type || 'image'} onChange={e => setCurrentItem({...currentItem, gallery_type: e.target.value})}>
+                    <option value="image">Image Gallery</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+                <UploadField field="image_url" label="Thumbnail" />
+                {currentItem.gallery_type === 'video' && <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Video URL</label><input className={inp} placeholder="YouTube / Vimeo URL" value={currentItem.video_url || ''} onChange={e => setCurrentItem({...currentItem, video_url: e.target.value})} /></div>}
+                {currentItem.gallery_type === 'image' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Gallery Images ({galleryImages.length})</label>
+                    <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors text-sm text-gray-500">
+                      {uploading ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Plus size={16} className="text-gray-400" />}
+                      Add images
+                      <input type="file" className="hidden" accept="image/*" multiple onChange={e => handleFileUpload(e, 'gallery', false, true)} />
+                    </label>
+                    {galleryImages.length > 0 && <div className="flex flex-wrap gap-2 mt-2">{galleryImages.map((url, i) => <img key={i} src={url} className="w-12 h-12 rounded object-cover border border-gray-200" />)}</div>}
+                  </div>
+                )}
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description</label><textarea required className={`${inp} h-24 resize-none`} placeholder="Project description" value={currentItem.description || ''} onChange={e => setCurrentItem({...currentItem, description: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tech Stack (comma separated)</label><input className={inp} placeholder="React, Node.js, ..." value={Array.isArray(currentItem.tech_stack) ? currentItem.tech_stack.join(', ') : currentItem.tech_stack || ''} onChange={e => setCurrentItem({...currentItem, tech_stack: e.target.value})} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Live URL</label><input className={inp} placeholder="https://..." value={currentItem.live_url || ''} onChange={e => setCurrentItem({...currentItem, live_url: e.target.value})} /></div>
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">GitHub URL</label><input className={inp} placeholder="https://..." value={currentItem.github_url || ''} onChange={e => setCurrentItem({...currentItem, github_url: e.target.value})} /></div>
+                </div>
+              </>)}
+
+              {activeTab === 'blogs' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} placeholder="Blog title" value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label><input required className={inp} placeholder="e.g. Design" value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})} /></div>
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Read Time</label><input required className={inp} placeholder="5 min read" value={currentItem.read_time || ''} onChange={e => setCurrentItem({...currentItem, read_time: e.target.value})} /></div>
+                </div>
+                <UploadField field="image_url" label="Cover Image" />
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Content</label><textarea required className={`${inp} h-40 resize-none`} placeholder="Write content..." value={currentItem.content || ''} onChange={e => setCurrentItem({...currentItem, content: e.target.value})} /></div>
+              </>)}
+
+              {activeTab === 'skills' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Skill Name</label><input required className={inp} placeholder="e.g. React" value={currentItem.name || ''} onChange={e => setCurrentItem({...currentItem, name: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label><input required className={inp} placeholder="e.g. Frontend" value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Percentage (0-100)</label><input required type="number" min={0} max={100} className={inp} value={currentItem.percentage || ''} onChange={e => setCurrentItem({...currentItem, percentage: Number(e.target.value)})} /></div>
+              </>)}
+
+              {activeTab === 'socials' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Platform</label><input required className={inp} placeholder="e.g. GitHub" value={currentItem.platform || ''} onChange={e => setCurrentItem({...currentItem, platform: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">URL</label><input required className={inp} placeholder="https://..." value={currentItem.url || ''} onChange={e => setCurrentItem({...currentItem, url: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Icon</label><IconPicker value={currentItem.icon || ''} onChange={v => setCurrentItem({...currentItem, icon: v})} /></div>
+              </>)}
+
+              {activeTab === 'services' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description</label><textarea required className={`${inp} h-24 resize-none`} value={currentItem.description || ''} onChange={e => setCurrentItem({...currentItem, description: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Icon</label><IconPicker value={currentItem.icon || ''} onChange={v => setCurrentItem({...currentItem, icon: v})} /></div>
+              </>)}
+
+              {activeTab === 'timeline' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Type</label>
+                  <select required className={inp} value={currentItem.type || 'experience'} onChange={e => setCurrentItem({...currentItem, type: e.target.value})}>
+                    <option value="experience">Experience</option>
+                    <option value="education">Education</option>
+                  </select>
+                </div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Institution</label><input required className={inp} value={currentItem.institution || ''} onChange={e => setCurrentItem({...currentItem, institution: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Period</label><input required className={inp} placeholder="2022 - 2024" value={currentItem.period || ''} onChange={e => setCurrentItem({...currentItem, period: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Order</label><input type="number" className={inp} value={currentItem.order_index || 0} onChange={e => setCurrentItem({...currentItem, order_index: Number(e.target.value)})} /></div>
+              </>)}
+
+              {activeTab === 'why' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description</label><textarea required className={`${inp} h-24 resize-none`} value={currentItem.description || ''} onChange={e => setCurrentItem({...currentItem, description: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Icon</label><IconPicker value={currentItem.icon || ''} onChange={v => setCurrentItem({...currentItem, icon: v})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Order</label><input type="number" className={inp} value={currentItem.order_index || 0} onChange={e => setCurrentItem({...currentItem, order_index: Number(e.target.value)})} /></div>
+              </>)}
+
+              {activeTab === 'testimonials' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Name</label><input required className={inp} value={currentItem.name || ''} onChange={e => setCurrentItem({...currentItem, name: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Role</label><input required className={inp} value={currentItem.role || ''} onChange={e => setCurrentItem({...currentItem, role: e.target.value})} /></div>
+                <UploadField field="photo_url" label="Photo" />
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Testimonial</label><textarea required className={`${inp} h-24 resize-none`} value={currentItem.text || ''} onChange={e => setCurrentItem({...currentItem, text: e.target.value})} /></div>
+              </>)}
+
+              {activeTab === 'categories' && (
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category Name</label><input required className={inp} placeholder="e.g. Web Design" value={currentItem.name || ''} onChange={e => setCurrentItem({...currentItem, name: e.target.value})} /></div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={isProcessing || uploading} className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                  {isProcessing ? 'Saving...' : isEditing ? 'Save Changes' : 'Add'}
+                </button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
               </div>
-
-              <form onSubmit={handleSubmitItem} className="space-y-6">
-                 {activeTab === 'projects' && (
-                    <div className="space-y-6">
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">PROJECT TITLE</label>
-                         <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none font-medium" placeholder="Project Title" value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} />
-                       </div>
-                       
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">CATEGORY</label>
-                         <select required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none appearance-none font-medium" value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})}>
-                            <option value="">Select Category</option>
-                            {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-                         </select>
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">MEDIA TYPE</label>
-                         <select required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none appearance-none font-medium" value={currentItem.gallery_type || 'image'} onChange={e => setCurrentItem({...currentItem, gallery_type: e.target.value})}>
-                            <option value="image">Image</option>
-                            <option value="video">Video</option>
-                         </select>
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">THUMBNAIL</label>
-                         <label className="w-full cursor-pointer bg-[#111] border border-white/5 text-slate-400 p-5 rounded-xl flex items-center justify-between transition-all hover:bg-white/5">
-                            <div className="flex items-center gap-3">
-                              {uploading ? <Loader2 size={16} className="animate-spin text-primary-500" /> : <Upload size={16} />}
-                              <span className="text-[10px] font-black uppercase tracking-widest">{currentItem.image_url ? 'IMAGE READY' : 'UPLOAD FILE'}</span>
-                            </div>
-                            {currentItem.image_url && <img src={currentItem.image_url} className="w-8 h-8 rounded-lg object-cover border border-white/10" />}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image_url')} />
-                         </label>
-                       </div>
-
-                       {currentItem.gallery_type === 'video' && (
-                         <div className="space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">VIDEO URL</label>
-                           <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none font-medium" placeholder="YouTube or Vimeo URL" value={currentItem.video_url || ''} onChange={e => setCurrentItem({...currentItem, video_url: e.target.value})} />
-                         </div>
-                       )}
-
-                       {currentItem.gallery_type === 'image' && (
-                         <div className="space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">GALLERY IMAGES (OPTIONAL)</label>
-                           <label className="w-full cursor-pointer bg-[#111] border border-white/5 text-slate-400 p-5 rounded-xl flex items-center justify-center gap-3 hover:bg-white/5 transition-all">
-                              {uploading ? <Loader2 size={16} className="animate-spin text-primary-500" /> : <Plus size={16} />}
-                              <span className="text-[10px] font-black uppercase tracking-widest">{galleryImages.length > 0 ? `${galleryImages.length} FILES READY` : 'ADD GALLERY IMAGES'}</span>
-                              <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleFileUpload(e, 'gallery', false, true)} />
-                           </label>
-                         </div>
-                       )}
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">PROJECT DESCRIPTION</label>
-                         <textarea required className="w-full bg-[#111] p-6 rounded-2xl text-white border-none outline-none h-32 resize-none font-medium" placeholder="Project Description" value={currentItem.description || ''} onChange={e => setCurrentItem({...currentItem, description: e.target.value})} />
-                       </div>
-                    </div>
-                 )}
-
-                 {activeTab === 'blogs' && (
-                    <div className="space-y-6">
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">BLOG TITLE</label>
-                         <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none font-medium" placeholder="Article Title" value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} />
-                       </div>
-                       
-                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">CATEGORY</label>
-                           <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none font-medium" placeholder="e.g. Design" value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})} />
-                         </div>
-                         <div className="space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">READ TIME</label>
-                           <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none font-medium" placeholder="e.g. 5 min read" value={currentItem.read_time || ''} onChange={e => setCurrentItem({...currentItem, read_time: e.target.value})} />
-                         </div>
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">COVER IMAGE</label>
-                         <label className="w-full cursor-pointer bg-[#111] border border-white/5 text-slate-400 p-5 rounded-xl flex items-center justify-between transition-all hover:bg-white/5">
-                            <div className="flex items-center gap-3">
-                              {uploading ? <Loader2 size={16} className="animate-spin text-primary-500" /> : <Upload size={16} />}
-                              <span className="text-[10px] font-black uppercase tracking-widest">{currentItem.image_url ? 'IMAGE READY' : 'UPLOAD COVER'}</span>
-                            </div>
-                            {currentItem.image_url && <img src={currentItem.image_url} className="w-8 h-8 rounded-lg object-cover border border-white/10" />}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'image_url')} />
-                         </label>
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block ml-1">CONTENT</label>
-                         <textarea required className="w-full bg-[#111] p-6 rounded-2xl text-white border-none outline-none h-48 resize-none font-medium" placeholder="Write your article content..." value={currentItem.content || ''} onChange={e => setCurrentItem({...currentItem, content: e.target.value})} />
-                       </div>
-                    </div>
-                 )}
-
-                 {activeTab !== 'projects' && activeTab !== 'blogs' && (
-                    <div className="space-y-5">
-                       <input required className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none" placeholder="Name/Title" value={currentItem.name || currentItem.title || currentItem.platform || ''} onChange={e => setCurrentItem({...currentItem, [activeTab === 'socials' ? 'platform' : (activeTab === 'skills' || activeTab === 'categories' ? 'name' : 'title')]: e.target.value})} />
-                       {activeTab === 'socials' && <input className="w-full bg-[#111] p-5 rounded-xl text-white border-none outline-none" placeholder="URL" value={currentItem.url || ''} onChange={e => setCurrentItem({...currentItem, url: e.target.value})} />}
-                    </div>
-                 )}
-
-                 <button type="submit" disabled={isProcessing || uploading} className="w-full py-6 bg-primary-500 text-black rounded-3xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary-500/30 transition-all active:scale-95 disabled:opacity-50 mt-4">
-                    {isProcessing ? 'Syncing...' : 'CONFIRM CHANGES'}
-                 </button>
-              </form>
-           </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

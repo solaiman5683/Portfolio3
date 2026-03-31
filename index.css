@@ -4,6 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 @layer utilities {
   .py-section {
     @apply py-16 sm:py-20 lg:py-24;
@@ -78,6 +79,10 @@
   --_typography---line--height--relaxed: 1.5;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--_theme---base--surface--surface);
   font-family: var(--_typography---font--family--body);
@@ -85,19 +90,25 @@ body {
   font-size: var(--_typography---font--size--sm);
   line-height: var(--_typography---line--height--normal);
   margin: 0;
-  cursor: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Selection: readable on dark UI */
+/* Selection */
 ::selection {
-  background: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  background: var(--_theme---accent);
+  color: #0c0d12;
 }
 ::-moz-selection {
-  background: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  background: var(--_theme---accent);
+  color: #0c0d12;
+}
+
+/* Dashboard (light bg) — dark text stays visible on selection */
+.dashboard-root ::selection,
+.dashboard-root ::-moz-selection {
+  background: #00d084;
+  color: #0c0d12;
 }
 
 #root {
@@ -121,9 +132,6 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--_theme---base--surface--overlay); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--_theme---accent); }
 
-a, button, input, textarea, [role="button"] {
-  cursor: none !important;
-}
 
 * {
   -webkit-tap-highlight-color: transparent;
