@@ -40,6 +40,12 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
     return url;
   };
 
+  const shortTitle = (title: string, max = 22) => {
+    const clean = (title || '').trim();
+    if (clean.length <= max) return clean;
+    return `${clean.slice(0, max).trimEnd()}...`;
+  };
+
   const projectImages = useMemo(() => {
     if (!selectedProject) return [];
     const gallery = selectedProject.gallery || [];
@@ -165,7 +171,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
           </div>
         </div>
 
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 [column-fill:_balance]">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {displayedProjects.map((project, index) => (
             <motion.button
               type="button"
@@ -178,42 +184,32 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                 setSelectedProject(project);
                 setCurrentImgIndex(0);
               }}
-              className="group mb-6 w-full break-inside-avoid rounded-2xl overflow-hidden bg-surface border border-white/[0.06] hover:border-primary-500/30 transition-all duration-500 relative text-left"
+              className="group w-full h-full rounded-2xl overflow-hidden bg-surface border border-white/[0.06] hover:border-primary-500/30 transition-all duration-500 relative text-left"
             >
-              <div className="relative w-full overflow-hidden bg-surface-elevated">
+              <div className="relative w-full aspect-[16/10] overflow-hidden bg-surface-elevated">
                 <img
                   src={project.image_url}
                   alt={project.title}
-                  className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   loading="lazy"
                 />
 
                 {project.video_url && (
-                  <div className="absolute top-4 right-4 flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-black/55 text-white border border-white/10 backdrop-blur-md">
-                      Video
-                    </span>
-                    <div className="h-10 w-10 rounded-full bg-primary-500 text-black grid place-items-center shadow-lg">
-                      <Play size={16} className="ml-0.5" />
-                    </div>
+                  <div className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/95 text-black grid place-items-center shadow-[0_12px_30px_-20px_rgba(0,0,0,0.85)] border border-black/10">
+                    <Play size={16} className="ml-0.5 fill-current" />
                   </div>
                 )}
+              </div>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-background/98 via-background/65 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute inset-x-0 bottom-0 p-6 sm:p-7 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                  <div className="transform translate-y-3 group-hover:translate-y-0 transition-transform duration-500">
-                    <div className="rounded-2xl bg-black/55 backdrop-blur-md border border-white/10 p-5 sm:p-6 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.85)]">
-                      <span className="text-[10px] font-semibold uppercase text-primary-400 tracking-wider">
-                        {project.category}
-                      </span>
-                      <h3 className="mt-2 font-title text-2xl sm:text-[1.7rem] font-semibold text-white leading-tight">
-                        {project.title}
-                      </h3>
-                      <div className="mt-3 inline-flex items-center gap-2 text-primary-300 text-[11px] font-semibold uppercase tracking-wider">
-                        View details <ArrowUpRight size={14} />
-                      </div>
-                    </div>
-                  </div>
+              <div className="px-5 py-4 border-t border-white/[0.06] bg-surface/80">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-300">
+                  {project.category || 'Project'}
+                </p>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-white leading-tight line-clamp-1">
+                    {shortTitle(project.title || 'Untitled Project')}
+                  </h3>
+                  <ArrowUpRight size={16} className="shrink-0 text-slate-300 group-hover:text-primary-400 transition-colors" />
                 </div>
               </div>
             </motion.button>
