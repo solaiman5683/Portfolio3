@@ -90,14 +90,43 @@ const About: React.FC = () => {
 
         <Skills skills={skills} />
 
-        <section className="py-section bg-surface-muted border-y border-white/[0.06]">
+        <section className="pt-24 pb-24 sm:pt-28 sm:pb-28 lg:pt-32 lg:pb-32 bg-surface-muted border-y border-white/[0.06]">
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+            <div className="max-w-3xl mb-14">
+              <span className="inline-block px-4 py-1.5 rounded-full border border-primary-500/25 bg-primary-500/10 text-primary-500 text-[11px] font-semibold tracking-widest uppercase mb-6">
+                Growth timeline
+              </span>
+              <h2 className="font-display text-display-lg font-bold text-white leading-tight">
+                Milestones that shape <span className="text-primary-500">delivery quality</span>
+              </h2>
+              <p className="text-slate-400 mt-5 leading-relaxed">
+                A snapshot of practical experience and academic foundation that support reliable execution,
+                clear communication, and consistent project outcomes.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-surface-raised/70 px-3.5 py-2 text-xs text-slate-300">
+                  <Briefcase size={14} className="text-primary-400" />
+                  {experience.length} professional roles
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-surface-raised/70 px-3.5 py-2 text-xs text-slate-300">
+                  <GraduationCap size={14} className="text-sky-400" />
+                  {education.length} academic records
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-surface-raised/70 px-3.5 py-2 text-xs text-slate-300">
+                  <Calendar size={14} className="text-amber-400" />
+                  Updated journey overview
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
               <div className="space-y-10">
                 <span className="text-primary-500 text-[11px] font-semibold uppercase tracking-widest block mb-4">Milestones</span>
                 <h2 className="font-display text-display-lg font-bold text-white">
                   Professional <span className="text-primary-500">path</span>
                 </h2>
+                <p className="text-slate-500 text-sm leading-relaxed -mt-4 max-w-xl">
+                  Roles focused on design quality, team collaboration, and business-aligned delivery across diverse client projects.
+                </p>
                 <div className="space-y-6">
                   {experience.map((item, idx) => (
                     <motion.div
@@ -123,11 +152,20 @@ const About: React.FC = () => {
                           </div>
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 shrink-0">{item.period}</span>
                         </div>
-                        {item.description && <p className="text-slate-500 text-sm leading-relaxed">{item.description}</p>}
+                        <p className="text-slate-500 text-sm leading-relaxed">
+                          {item.description || 'Contributed to creative strategy, campaign execution, and measurable visual communication outcomes.'}
+                        </p>
                       </div>
                     </motion.div>
                   ))}
-                  {experience.length === 0 && <p className="text-slate-600 text-sm">Experience coming soon.</p>}
+                  {experience.length === 0 && (
+                    <div className="rounded-2xl border border-white/[0.08] bg-surface p-6">
+                      <p className="text-slate-300 font-medium">Experience details are being curated.</p>
+                      <p className="text-slate-500 text-sm mt-2">
+                        Upcoming updates will include key roles, responsibilities, and notable outcomes from recent projects.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="space-y-10">
@@ -135,6 +173,9 @@ const About: React.FC = () => {
                 <h2 className="font-display text-display-lg font-bold text-white">
                   Academic <span className="text-primary-500">history</span>
                 </h2>
+                <p className="text-slate-500 text-sm leading-relaxed -mt-4 max-w-xl">
+                  Learning milestones that strengthen critical thinking, communication, and modern creative workflows.
+                </p>
                 <div className="space-y-6">
                   {education.map((item, idx) => (
                     <motion.div
@@ -160,11 +201,20 @@ const About: React.FC = () => {
                           </div>
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 shrink-0">{item.period}</span>
                         </div>
-                        {item.description && <p className="text-slate-500 text-sm leading-relaxed">{item.description}</p>}
+                        <p className="text-slate-500 text-sm leading-relaxed">
+                          {item.description || 'Built a strong foundation in research, structured problem-solving, and communication for client-facing work.'}
+                        </p>
                       </div>
                     </motion.div>
                   ))}
-                  {education.length === 0 && <p className="text-slate-600 text-sm">Education coming soon.</p>}
+                  {education.length === 0 && (
+                    <div className="rounded-2xl border border-white/[0.08] bg-surface p-6">
+                      <p className="text-slate-300 font-medium">Academic profile update coming soon.</p>
+                      <p className="text-slate-500 text-sm mt-2">
+                        This area will include qualifications, study focus, and relevant learning achievements.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
