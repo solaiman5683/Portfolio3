@@ -65,7 +65,7 @@ const Home: React.FC = () => {
     <div className="bg-background overflow-hidden scroll-smooth min-h-screen">
       <Navbar />
       <Hero profile={profile} socials={socials} />
-      {skills.length > 0 && <Skills skills={skills} />}
+      <Skills skills={skills} />
       {services.length > 0 && <Services services={services} />}
       {projects.length > 0 && <Projects projects={projects} isHomePage={true} />}
       {testimonials.length > 0 && <Testimonials testimonials={testimonials} />}

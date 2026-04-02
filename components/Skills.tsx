@@ -34,19 +34,17 @@ const Skills: React.FC<SkillsProps> = ({ skills }) => {
 
   const normalize = (value: string) => value.trim().toLowerCase();
 
-  const mergedSkills = (() => {
-    const byName = new Map<string, Skill>();
-    for (const s of curatedTools) byName.set(normalize(s.name), s);
-    for (const s of skills) byName.set(normalize(s.name), s);
-    const excluded = new Set([
-      'canva',
-      'capcut',
-      'filmora',
-      'picsart',
-      'snapseed',
-    ]);
-    return Array.from(byName.values()).filter((s) => !excluded.has(normalize(s.name)));
-  })();
+  const excluded = new Set([
+    'canva',
+    'capcut',
+    'filmora',
+    'picsart',
+    'snapseed',
+  ]);
+
+  // DB skills get priority. Curated tools are only fallback when DB has no rows.
+  const sourceSkills = skills.length > 0 ? skills : curatedTools;
+  const visibleSkills = sourceSkills.filter((s) => !excluded.has(normalize(s.name)));
 
   const IconComponent = ({ skill }: { skill: Skill }) => {
     if (skill.icon_url) {
@@ -92,28 +90,6 @@ const Skills: React.FC<SkillsProps> = ({ skills }) => {
     const Icon = (LucideIcons as any)[skill.icon || ''] || LucideIcons.AppWindow;
     return <Icon className="w-6 h-6" />;
   };
-
-  const hasGuaranteedIcon = (skill: Skill) => {
-    if (skill.icon_url) return true;
-    const name = normalize(skill.name);
-    return (
-      name === 'adobe photoshop' ||
-      name === 'photoshop' ||
-      name === 'adobe illustrator' ||
-      name === 'illustrator' ||
-      name === 'adobe after effects' ||
-      name === 'after effects' ||
-      name === 'adobe premiere pro' ||
-      name === 'premiere pro' ||
-      name === 'figma' ||
-      name === 'sketch' ||
-      name === 'blender' ||
-      name === 'cinema 4d' ||
-      name === 'davinci resolve'
-    );
-  };
-
-  const visibleSkills = mergedSkills.filter(hasGuaranteedIcon);
 
   return (
     <section
