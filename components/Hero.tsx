@@ -17,17 +17,17 @@ const Hero: React.FC<HeroProps> = ({ profile, socials }) => {
   const navigate = useNavigate();
 
   const displayName = profile?.name?.trim() || 'Md Abdul Hai';
-  const displayTitle = profile?.title?.trim() || 'Senior Visualizer';
+  const displayTitle = profile?.title?.trim() || 'Senior Visualizer.';
   const displayBio =
     profile?.bio?.trim() ||
     'Brands lose attention when their visuals look inconsistent, outdated, or “just okay.” I design premium static and motion visuals + edit video that makes your content feel high-end, improves clarity, and boosts brand visibility across socials and campaigns.';
   const rotatingRoles = useMemo(() => {
-    const base = displayTitle || 'Senior Visualizer';
+    const base = displayTitle || 'Senior Visualizer.';
     const roles = [
       base,
-      'Motion Graphic Designer',
-      'CGI Artist',
-      'Brand Visualizer',
+      'Motion Designer.',
+      'CGI Artist.',
+      'Brand Visualizer.',
     ];
     return Array.from(new Set(roles.filter(Boolean)));
   }, [displayTitle]);
@@ -56,8 +56,10 @@ const Hero: React.FC<HeroProps> = ({ profile, socials }) => {
     if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
     const vimeoMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
     if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
-    return url;
+    return '';
   };
+
+  const isEmbedVideo = Boolean(getEmbedUrl(profile?.video_url || ''));
 
   const scrollToNextSection = () => {
     document.getElementById('expertise')?.scrollIntoView({ behavior: 'smooth' });
@@ -183,19 +185,31 @@ const Hero: React.FC<HeroProps> = ({ profile, socials }) => {
                           }}
                         >
                           <Play size={16} className="ml-0.5 fill-current" />
-                          Watch intro
+                          Watch Video
                         </button>
                       </DialogTrigger>
                       <DialogContent className="max-w-5xl p-0 bg-black border border-white/10 overflow-hidden">
                         <div className="aspect-video w-full">
-                          <iframe
-                            src={getEmbedUrl(profile.video_url)}
-                            className="w-full h-full"
-                            title="Intro reel"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
+                          {isEmbedVideo ? (
+                            <iframe
+                              src={getEmbedUrl(profile.video_url)}
+                              className="w-full h-full"
+                              title="Intro reel"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video
+                              src={profile.video_url}
+                              className="w-full h-full"
+                              controls
+                              autoPlay
+                              playsInline
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          )}
                         </div>
                       </DialogContent>
                     </Dialog>

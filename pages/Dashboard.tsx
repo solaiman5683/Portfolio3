@@ -6,7 +6,7 @@ import * as LucideIcons from 'lucide-react';
 import {
   User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X,
   Upload, Loader2, Share2, Award, FileText, Globe, History, Layers,
-  Cpu, Star, Tag, Link as LinkIcon, Search
+  Cpu, Star, Tag, Link as LinkIcon, Search, Video
 } from 'lucide-react';
 import {
   Project, Skill, Profile, ContactMessage, Service, Testimonial,
@@ -357,16 +357,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     setIsModalOpen(true);
   };
 
-  const UploadField = ({ field, label, isProfile = false }: { field: string; label: string; isProfile?: boolean }) => {
+  const UploadField = ({
+    field,
+    label,
+    isProfile = false,
+    accept = 'image/*',
+    uploadLabel = 'Upload image',
+    changeLabel = 'Change image',
+    previewKind = 'image',
+  }: {
+    field: string;
+    label: string;
+    isProfile?: boolean;
+    accept?: string;
+    uploadLabel?: string;
+    changeLabel?: string;
+    previewKind?: 'image' | 'video' | 'none';
+  }) => {
     const currentUrl = isProfile ? (profile as any)?.[field] : currentItem[field];
     return (
       <div>
         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
         <label className="flex items-center gap-3 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
           {uploading ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Upload size={16} className="text-gray-400" />}
-          <span className="text-sm text-gray-500">{currentUrl ? 'Change image' : 'Upload image'}</span>
-          {currentUrl && <img src={currentUrl} className="w-8 h-8 rounded object-cover ml-auto border border-gray-200" />}
-          <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, field, isProfile)} />
+          <span className="text-sm text-gray-500">{currentUrl ? changeLabel : uploadLabel}</span>
+          {currentUrl && previewKind === 'image' && <img src={currentUrl} className="w-8 h-8 rounded object-cover ml-auto border border-gray-200" />}
+          {currentUrl && previewKind === 'video' && <Video size={16} className="ml-auto text-blue-500" />}
+          <input type="file" className="hidden" accept={accept} onChange={e => handleFileUpload(e, field, isProfile)} />
         </label>
       </div>
     );
@@ -392,10 +409,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           </div>
           <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bio</label><textarea className={`${inp} h-32 resize-none`} value={profile.bio || ''} onChange={e => setProfile({ ...profile, bio: e.target.value })} placeholder="Tell your story..." /></div>
           <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">About Headline</label><input className={inp} value={profile.about_headline || ''} onChange={e => setProfile({ ...profile, about_headline: e.target.value })} /></div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Watch Video URL</label>
+            <input
+              className={inp}
+              value={profile.video_url || ''}
+              onChange={e => setProfile({ ...profile, video_url: e.target.value })}
+              placeholder="YouTube/Vimeo URL or uploaded video URL"
+            />
+            <p className="mt-1 text-xs text-gray-400">You can paste a YouTube URL or upload a video file below.</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UploadField field="avatar_url" label="Avatar Photo" isProfile />
             <UploadField field="about_image_url" label="About Page Image" isProfile />
           </div>
+          <UploadField
+            field="video_url"
+            label="Watch Video File"
+            isProfile
+            accept="video/mp4,video/webm,video/ogg"
+            uploadLabel="Upload video"
+            changeLabel="Replace video"
+            previewKind="video"
+          />
           <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">Save Profile</button>
         </form>
       );
