@@ -68,6 +68,31 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
     return [String(features).trim()].filter(Boolean);
   };
 
+  const getServiceMeta = (service: Service) => {
+    const title = (service.title || '').trim().toLowerCase();
+
+    const fallback = (() => {
+      if (title.includes('graphic')) {
+        return { bestFor: 'Brand identity, ads, social creatives', outcome: 'Consistent visuals that convert' };
+      }
+      if (title.includes('motion')) {
+        return { bestFor: 'Promos, explainers, social reels', outcome: 'Scroll-stopping movement & clarity' };
+      }
+      if (title.includes('video')) {
+        return { bestFor: 'YouTube, shorts, commercials', outcome: 'Clean pacing, polish, and retention' };
+      }
+      if (title.includes('cgi') || title.includes('vfx') || title.includes('3d')) {
+        return { bestFor: 'Product visuals, renders, VFX shots', outcome: 'Premium realism & cinematic feel' };
+      }
+      return { bestFor: 'Custom creative needs', outcome: 'A high-end finish, delivered fast' };
+    })();
+
+    return {
+      bestFor: service.best_for?.trim() || fallback.bestFor,
+      outcome: service.outcome?.trim() || fallback.outcome,
+    };
+  };
+
   return (
     <section
       id="services"
@@ -121,6 +146,7 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {services.map((service, index) => {
             const featureList = parseFeatures(service.features);
+            const meta = getServiceMeta(service);
             const hasLongDescription = (service.description || '').trim().length > 260;
             const hasManyFeatures = featureList.length > 4;
             const needsExpand = hasLongDescription || hasManyFeatures;
@@ -191,6 +217,24 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
                   )}
 
                   <div className="mt-auto border-t pt-5" style={{ borderColor: 'var(--_theme---base--border--subtle)' }} />
+                  <div className="mt-5 space-y-2">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                        Best for
+                      </p>
+                      <p className="text-xs leading-snug mt-1" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                        {meta.bestFor}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                        Outcome
+                      </p>
+                      <p className="text-xs leading-snug mt-1" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                        {meta.outcome}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             );
@@ -249,6 +293,25 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
                     <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--_theme---base--text--secondary)' }}>
                       {selectedService.description}
                     </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="rounded-xl border p-4" style={{ borderColor: 'var(--_theme---base--border--subtle)', backgroundColor: 'var(--_theme---base--surface--raised)' }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                        Best for
+                      </p>
+                      <p className="text-sm leading-relaxed mt-2" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                        {getServiceMeta(selectedService).bestFor}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border p-4" style={{ borderColor: 'var(--_theme---base--border--subtle)', backgroundColor: 'var(--_theme---base--surface--raised)' }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                        Outcome
+                      </p>
+                      <p className="text-sm leading-relaxed mt-2" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                        {getServiceMeta(selectedService).outcome}
+                      </p>
+                    </div>
                   </div>
 
                   {(() => {

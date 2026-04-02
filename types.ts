@@ -64,6 +64,8 @@ export interface Service {
   title: string;
   description: string;
   icon: string;
+  best_for?: string;
+  outcome?: string;
   features?: string; // Comma separated string of features
 }
 

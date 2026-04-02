@@ -720,6 +720,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               {activeTab === 'services' && (<>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description</label><textarea required className={`${inp} h-24 resize-none`} value={currentItem.description || ''} onChange={e => setCurrentItem({...currentItem, description: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Best For</label><input className={inp} placeholder="Brand identity, ads, social creatives" value={currentItem.best_for || ''} onChange={e => setCurrentItem({...currentItem, best_for: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Outcome</label><input className={inp} placeholder="Consistent visuals that convert" value={currentItem.outcome || ''} onChange={e => setCurrentItem({...currentItem, outcome: e.target.value})} /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Icon</label><IconPicker value={currentItem.icon || ''} onChange={v => setCurrentItem({...currentItem, icon: v})} /></div>
               </>)}
 
