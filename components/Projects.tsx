@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Github, ArrowUpRight, X, ChevronLeft, ChevronRight, Youtube, Maximize2, Image as ImageIcon, ArrowRight, Play } from 'lucide-react';
+import { ExternalLink, Github, ArrowUpRight, X, ChevronLeft, ChevronRight, Maximize2, ArrowRight, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Project } from '../types';
 import { Dialog, DialogContent } from './ui/dialog';
@@ -60,7 +61,9 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
 
   useEffect(() => {
     if (selectedProject) {
-      setActiveTab(selectedProject.gallery_type === 'video' ? 'video' : 'gallery');
+      const hasGallery = Boolean(selectedProject.image_url) || Boolean(selectedProject.gallery?.length);
+      if (hasGallery) setActiveTab('gallery');
+      else setActiveTab(selectedProject.gallery_type === 'video' ? 'video' : 'gallery');
     }
   }, [selectedProject]);
 
@@ -240,158 +243,150 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
       </div>
 
       <Dialog open={!!selectedProject} onOpenChange={(open) => !open && closeModals()}>
-        <DialogContent hideCloseButton className="max-w-6xl p-0 bg-slate-900 border border-white/10 overflow-hidden">
+        <DialogContent
+          hideCloseButton
+          className="max-w-5xl w-full max-h-[92vh] p-0 bg-[#0c0c0e] border border-white/[0.07] overflow-hidden rounded-2xl"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           {selectedProject && (
-            <div className="relative">
+            <div className="relative flex flex-col lg:flex-row max-h-[92vh]">
+              {/* Close */}
               <button
                 onClick={closeModals}
-                className="absolute top-4 right-4 md:top-6 md:right-6 p-3 bg-black/60 text-white rounded-full hover:bg-primary-500 hover:text-black transition-all z-[50] border border-white/10 backdrop-blur-md"
+                className="absolute top-3.5 right-3.5 z-[60] p-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-white/50 hover:text-white transition-all border border-white/[0.06]"
+                aria-label="Close"
               >
-                <X size={18} />
+                <X size={15} />
               </button>
 
-              <div className="flex flex-col lg:flex-row items-stretch">
-                {/* Left: media */}
-                <div className="w-full lg:w-[60%] bg-black relative group/media overflow-hidden border-r border-white/5 flex items-center justify-center min-h-[360px]">
+              {/* Left: media */}
+              <div className="relative lg:w-[58%] shrink-0 bg-black overflow-hidden lg:rounded-l-2xl">
+                {/* Tab switcher */}
+                {selectedProject.video_url && (
+                  <div className="absolute top-3 left-3 z-50 flex gap-1 p-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/[0.08]">
+                    <button
+                      onClick={() => setActiveTab('gallery')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                        activeTab === 'gallery' ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                      }`}
+                    >
+                      Gallery
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('video')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-all ${
+                        activeTab === 'video' ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                      }`}
+                    >
+                      Video
+                    </button>
+                  </div>
+                )}
+
+                <div className="w-full h-[260px] sm:h-[380px] lg:h-[520px] relative overflow-hidden">
                   {activeTab === 'video' && selectedProject.video_url ? (
-                    <div className="w-full h-full aspect-video flex items-center justify-center">
-                      <iframe
-                        src={getEmbedUrl(selectedProject.video_url)}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allow="autoplay; fullscreen; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
+                    <iframe
+                      src={`${getEmbedUrl(selectedProject.video_url)}${getEmbedUrl(selectedProject.video_url).includes('?') ? '&' : '?'}rel=0&modestbranding=1&iv_load_policy=3`}
+                      className="w-full h-full"
+                      frameBorder="0"
+                      allow="autoplay; fullscreen; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
                   ) : (
-                    <div className="w-full h-full relative">
+                    <>
                       <div
                         ref={carouselRef}
                         onScroll={handleScroll}
-                        className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth custom-scrollbar-hide"
+                        className="w-full h-full flex overflow-x-auto snap-x snap-mandatory"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
                         {projectImages.map((url, i) => (
-                          <div key={i} className="w-full h-full shrink-0 snap-center flex items-center justify-center bg-black relative">
-                            <img src={url} className="absolute inset-0 w-full h-full object-cover blur-xl md:blur-3xl opacity-20 scale-110" alt="" loading="lazy" />
-                            <img src={url} className="relative z-10 max-w-full max-h-full object-contain" alt={`${selectedProject.title} ${i + 1}`} loading="lazy" />
+                          <div key={i} className="w-full h-full shrink-0 snap-center relative bg-black">
+                            <img src={url} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-[0.15] scale-110" alt="" loading="lazy" />
+                            <img src={url} className="relative z-10 w-full h-full object-contain" alt={`${selectedProject.title} ${i + 1}`} loading="lazy" />
                           </div>
                         ))}
                       </div>
 
                       {projectImages.length > 1 && (
                         <>
-                          <button
-                            onClick={handlePrev}
-                            className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-black/40 text-white rounded-full backdrop-blur-md lg:opacity-0 lg:group-hover/media:opacity-100 transition-all hover:bg-primary-500 hover:text-black z-20 border border-white/10"
-                          >
-                            <ChevronLeft size={22} />
+                          <button onClick={handlePrev} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full backdrop-blur-sm hover:bg-white hover:text-black transition-all z-20 border border-white/[0.08]">
+                            <ChevronLeft size={16} />
                           </button>
-                          <button
-                            onClick={handleNext}
-                            className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-black/40 text-white rounded-full backdrop-blur-md lg:opacity-0 lg:group-hover/media:opacity-100 transition-all hover:bg-primary-500 hover:text-black z-20 border border-white/10"
-                          >
-                            <ChevronRight size={22} />
+                          <button onClick={handleNext} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full backdrop-blur-sm hover:bg-white hover:text-black transition-all z-20 border border-white/[0.08]">
+                            <ChevronRight size={16} />
                           </button>
-
-                          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                             {projectImages.map((_, i) => (
                               <button
                                 key={i}
                                 onClick={() => scrollToImage(i)}
-                                className={`h-2 rounded-full transition-all ${currentImgIndex === i ? 'bg-primary-500 w-8' : 'bg-white/20 w-2'}`}
-                                aria-label={`Go to image ${i + 1}`}
+                                className={`h-[3px] rounded-full transition-all duration-300 ${currentImgIndex === i ? 'bg-white w-5' : 'bg-white/25 w-[5px]'}`}
+                                aria-label={`Image ${i + 1}`}
                               />
                             ))}
                           </div>
                         </>
                       )}
-                    </div>
-                  )}
 
-                  {/* View toggles */}
-                  {selectedProject.video_url && (
-                    <div className="absolute top-4 left-4 md:top-6 md:left-6 flex gap-2 z-30">
                       <button
-                        onClick={() => setActiveTab('gallery')}
-                        className={`px-4 py-2 rounded-full flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider transition-all border ${
-                          activeTab === 'gallery'
-                            ? 'bg-primary-500 text-black border-primary-500'
-                            : 'bg-black/60 text-white hover:bg-black/75 border-white/10 backdrop-blur-md'
-                        }`}
+                        onClick={(e) => { e.stopPropagation(); setIsLightboxOpen(true); }}
+                        className="absolute bottom-3 right-3 p-2 bg-black/50 text-white/70 rounded-full backdrop-blur-sm hover:bg-white hover:text-black transition-all z-20 border border-white/[0.08]"
+                        aria-label="Fullscreen"
                       >
-                        <ImageIcon size={14} /> Gallery
+                        <Maximize2 size={13} />
                       </button>
-                      <button
-                        onClick={() => setActiveTab('video')}
-                        className={`px-4 py-2 rounded-full flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider transition-all border ${
-                          activeTab === 'video'
-                            ? 'bg-primary-500 text-black border-primary-500'
-                            : 'bg-black/60 text-white hover:bg-black/75 border-white/10 backdrop-blur-md'
-                        }`}
-                      >
-                        <Youtube size={14} /> Video
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Fullscreen button (gallery only) */}
-                  {activeTab === 'gallery' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsLightboxOpen(true);
-                      }}
-                      className="absolute bottom-4 right-4 md:top-6 md:right-6 md:bottom-auto p-3 md:p-4 bg-black/60 text-white rounded-full backdrop-blur-md transition-all hover:bg-primary-500 hover:text-black z-30 border border-white/10 pointer-events-auto"
-                      aria-label="Open fullscreen"
-                    >
-                      <Maximize2 size={18} />
-                    </button>
+                    </>
                   )}
                 </div>
+              </div>
 
-                {/* Right: details (no thumbnails) */}
-                <div className="w-full lg:w-[40%] p-8 sm:p-10 lg:p-12 overflow-y-auto custom-scrollbar flex flex-col">
-                  <div className="flex-1">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-500 text-[10px] font-semibold uppercase tracking-wider mb-5">
-                      {selectedProject.category}
-                    </div>
-                    <h2 className="font-title text-3xl sm:text-4xl font-bold text-white leading-tight tracking-tight">
-                      {selectedProject.title}
-                    </h2>
+              {/* Right: details */}
+              <div className="flex-1 min-w-0 overflow-y-auto flex flex-col p-7 lg:p-8" style={{ scrollbarWidth: 'none' }}>
+                <div className="flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30 mb-2">
+                    {selectedProject.category}
+                  </p>
+                  <h2 className="font-title text-2xl sm:text-[1.75rem] font-bold text-white leading-tight tracking-tight mb-5">
+                    {selectedProject.title}
+                  </h2>
 
-                    <div className="mt-6 space-y-7">
+                  <div className="h-px bg-white/[0.05] mb-5" />
+
+                  <div className="space-y-5">
+                    {selectedProject.description && (
                       <div>
-                        <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Overview</h4>
-                        <p className="text-slate-300/90 text-sm leading-relaxed">
-                          {selectedProject.description}
-                        </p>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/25 mb-2">Overview</p>
+                        <p className="text-[13px] text-white/55 leading-relaxed">{selectedProject.description}</p>
                       </div>
+                    )}
 
-                      {selectedProject.tech_stack && selectedProject.tech_stack.length > 0 && (
-                        <div>
-                          <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Tools / Stack</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedProject.tech_stack.map((tech) => (
-                              <span key={tech} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[11px] font-medium text-slate-300/80">
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
+                    {selectedProject.tech_stack && selectedProject.tech_stack.length > 0 && (
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/25 mb-2">Tools</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProject.tech_stack.map((tech) => (
+                            <span key={tech} className="px-2.5 py-1 bg-white/[0.04] border border-white/[0.07] rounded-md text-[11px] text-white/45">
+                              {tech}
+                            </span>
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
+                </div>
 
-                  <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-8 border-t border-white/10">
+                {(selectedProject.live_url || selectedProject.github_url) && (
+                  <div className="mt-7 pt-5 border-t border-white/[0.05] flex flex-col gap-2">
                     {selectedProject.live_url && (
                       <a
                         href={selectedProject.live_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 py-3.5 bg-primary-500 text-black rounded-xl font-semibold text-sm hover:bg-primary-400 transition-colors"
+                        className="flex items-center justify-center gap-2 py-2.5 bg-white text-black rounded-xl font-semibold text-sm hover:bg-white/90 transition-colors"
                       >
-                        Visit live <ExternalLink size={16} />
+                        View project <ExternalLink size={13} />
                       </a>
                     )}
                     {selectedProject.github_url && (
@@ -399,74 +394,82 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                         href={selectedProject.github_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold text-sm hover:bg-white/10 transition-colors"
+                        className="flex items-center justify-center gap-2 py-2.5 bg-white/[0.04] border border-white/[0.07] text-white/60 rounded-xl font-semibold text-sm hover:bg-white/[0.08] hover:text-white transition-colors"
                       >
-                        Source code <Github size={16} />
+                        Source code <Github size={13} />
                       </a>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Lightbox / Fullscreen Image */}
-      <AnimatePresence>
-        {isLightboxOpen && selectedProject && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/98 flex flex-col items-center justify-center p-6"
-          >
-             {/* Full Screen Close Button */}
-             <button 
-               onClick={(e) => {
-                 e.stopPropagation();
-                 setIsLightboxOpen(false);
-               }}
-               className="absolute top-10 right-10 p-5 bg-black/60 text-white rounded-full hover:bg-primary-500 hover:text-black transition-all z-[350] border border-white/10 pointer-events-auto shadow-2xl backdrop-blur-xl"
-             >
-               <X size={24} />
-             </button>
+      {/* Lightbox — portal to body, layered structure to avoid click conflicts */}
+      {createPortal(
+        <AnimatePresence>
+          {isLightboxOpen && selectedProject && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999]"
+            >
+              {/* Backdrop: click to close, sits behind everything */}
+              <div
+                className="absolute inset-0 bg-black/95 cursor-zoom-out"
+                onClick={() => setIsLightboxOpen(false)}
+              />
 
-             <div className="relative w-full h-full flex items-center justify-center group/lightbox z-10">
-                {projectImages.length > 1 && (
-                  <>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                      className="absolute left-6 md:left-10 p-6 bg-black/40 text-white rounded-full hover:bg-primary-500 hover:text-black transition-all z-[320] pointer-events-auto backdrop-blur-md"
-                    >
-                      <ChevronLeft size={32} />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                      className="absolute right-6 md:right-10 p-6 bg-black/40 text-white rounded-full hover:bg-primary-500 hover:text-black transition-all z-[320] pointer-events-auto backdrop-blur-md"
-                    >
-                      <ChevronRight size={32} />
-                    </button>
-                  </>
-                )}
+              {/* Image: above backdrop, pointer-events-none so clicks pass to backdrop */}
+              <motion.img
+                key={currentImgIndex}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2 }}
+                src={projectImages[currentImgIndex]}
+                className="absolute inset-0 m-auto max-w-[90vw] max-h-[90vh] object-contain pointer-events-none"
+              />
 
-                <motion.img 
-                  key={currentImgIndex}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  src={projectImages[currentImgIndex]} 
-                  className="max-w-full max-h-full object-contain shadow-[0_0_100px_rgba(0,208,132,0.1)] relative z-[310]" 
-                  onClick={(e) => e.stopPropagation()}
-                />
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => setIsLightboxOpen(false)}
+                className="absolute top-5 right-5 z-10 p-2 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20"
+              >
+                <X size={16} />
+              </button>
 
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/60 border border-white/10 rounded-full text-[11px] font-black uppercase tracking-[0.4em] text-white backdrop-blur-md z-[320]">
-                   {currentImgIndex + 1} / {projectImages.length}
-                </div>
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {/* Nav buttons: above image, independent of backdrop */}
+              {projectImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    className="absolute left-5 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+
+                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-white/[0.06] border border-white/[0.08] rounded-full text-[11px] text-white/50">
+                    {currentImgIndex + 1} / {projectImages.length}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 };
