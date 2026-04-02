@@ -1,36 +1,71 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Service } from '../types';
 import { ArrowRight } from 'lucide-react';
+import { Dialog, DialogContent } from './ui/dialog';
 
 interface ServicesProps {
   services: Service[];
 }
 
 const Services: React.FC<ServicesProps> = ({ services }) => {
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
   const IconComponent = ({ name, className }: { name: string; className?: string }) => {
     const Icon = (LucideIcons as any)[name] || LucideIcons.Layers;
     return <Icon className={className} />;
   };
 
-  const getServiceMeta = (title: string) => {
-    const t = title.trim().toLowerCase();
-    if (t.includes('graphic')) {
-      return { bestFor: 'Brand identity, ads, social creatives', outcome: 'Consistent visuals that convert' };
+  const truncateText = (text: string, maxLength: number) => {
+    const clean = (text || '').trim();
+    if (clean.length <= maxLength) return clean;
+    const sliced = clean.slice(0, maxLength);
+    const lastSpace = sliced.lastIndexOf(' ');
+    const safe = lastSpace > 80 ? sliced.slice(0, lastSpace) : sliced;
+    return `${safe}...`;
+  };
+
+  const parseFeatures = (features: unknown): string[] => {
+    if (!features) return [];
+
+    if (Array.isArray(features)) {
+      return features
+        .map((item) => String(item).trim())
+        .filter(Boolean);
     }
-    if (t.includes('motion')) {
-      return { bestFor: 'Promos, explainers, social reels', outcome: 'Scroll-stopping movement & clarity' };
+
+    if (typeof features === 'string') {
+      const trimmed = features.trim();
+      if (!trimmed) return [];
+
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => String(item).trim())
+            .filter(Boolean);
+        }
+      } catch {
+        // Fall back to comma-separated values.
+      }
+
+      return trimmed
+        .split(',')
+        .map((f) => f.trim())
+        .filter(Boolean);
     }
-    if (t.includes('video')) {
-      return { bestFor: 'YouTube, shorts, commercials', outcome: 'Clean pacing, polish, and retention' };
+
+    if (typeof features === 'object') {
+      const values = Object.values(features as Record<string, unknown>);
+      return values
+        .map((item) => String(item).trim())
+        .filter(Boolean);
     }
-    if (t.includes('cgi') || t.includes('vfx') || t.includes('3d')) {
-      return { bestFor: 'Product visuals, renders, VFX shots', outcome: 'Premium realism & cinematic feel' };
-    }
-    return { bestFor: 'Custom creative needs', outcome: 'A high-end finish, delivered fast' };
+
+    return [String(features).trim()].filter(Boolean);
   };
 
   return (
@@ -83,12 +118,15 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {services.map((service, index) => {
-            const featureList = Array.isArray(service.features)
-              ? service.features
-              : service.features?.split(',').map((f: string) => f.trim()).filter(Boolean) || [];
-            const meta = getServiceMeta(service.title);
+            const featureList = parseFeatures(service.features);
+            const hasLongDescription = (service.description || '').trim().length > 260;
+            const hasManyFeatures = featureList.length > 4;
+            const needsExpand = hasLongDescription || hasManyFeatures;
+            const previewDescription = truncateText(service.description || '', 260);
+            const previewFeatures = hasManyFeatures ? featureList.slice(0, 4) : featureList;
+
             return (
               <motion.div
                 key={service.id}
@@ -96,7 +134,7 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ delay: index * 0.08, duration: 0.5 }}
-                className="group relative p-8 rounded-2xl transition-all duration-500 overflow-hidden flex flex-col h-full border hover:-translate-y-0.5"
+                className="group relative p-7 rounded-2xl transition-all duration-500 overflow-hidden flex flex-col h-full border hover:-translate-y-0.5"
                 style={{ backgroundColor: 'var(--_theme---base--surface--raised)', borderColor: 'var(--_theme---base--border--subtle)' }}
               >
                 <div className="absolute -right-8 -bottom-8 w-28 h-28 blur-2xl rounded-full transition-all duration-500 group-hover:opacity-100 opacity-60" style={{ backgroundColor: 'var(--_theme---accent--muted)' }} />
@@ -115,36 +153,44 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
                   <h3 className="font-title text-xl font-semibold mb-3 transition-colors group-hover:[color:var(--_theme---accent)]" style={{ color: 'var(--_theme---base--text--primary)' }}>
                     {service.title}
                   </h3>
-                  <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--_theme---base--text--muted)' }}>
-                    {service.description}
+                  <p className="text-sm leading-relaxed mb-4 break-words" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                    {previewDescription}
                   </p>
 
+                  {needsExpand && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedService(service)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold mb-5 transition-colors hover:opacity-90"
+                      style={{ color: 'var(--_theme---accent)' }}
+                    >
+                      Show more <LucideIcons.ArrowUpRight size={13} />
+                    </button>
+                  )}
+
                   {featureList.length > 0 && (
-                    <div className="space-y-2.5 mb-6 border-t pt-6" style={{ borderColor: 'var(--_theme---base--border--subtle)' }}>
+                    <div className="space-y-2.5 mb-6 border-t pt-5" style={{ borderColor: 'var(--_theme---base--border--subtle)' }}>
                       <p className="text-[10px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--_theme---base--text--muted)' }}>Included</p>
-                      {featureList.map((feature, i) => (
+                      {previewFeatures.map((feature, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <LucideIcons.Check className="shrink-0" size={14} style={{ color: 'var(--_theme---accent)' }} />
                           <span className="text-xs" style={{ color: 'var(--_theme---base--text--secondary)' }}>{feature}</span>
                         </div>
                       ))}
+                      {hasManyFeatures && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedService(service)}
+                          className="text-xs font-semibold pt-1 transition-colors hover:opacity-90"
+                          style={{ color: 'var(--_theme---accent)' }}
+                        >
+                          +{featureList.length - previewFeatures.length} more
+                        </button>
+                      )}
                     </div>
                   )}
 
-                  <div className="mt-auto border-t pt-5 space-y-2" style={{ borderColor: 'var(--_theme---base--border--subtle)' }}>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--_theme---base--text--muted)' }}>
-                      Best for
-                    </div>
-                    <div className="text-xs leading-snug" style={{ color: 'var(--_theme---base--text--secondary)' }}>
-                      {meta.bestFor}
-                    </div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider pt-2" style={{ color: 'var(--_theme---base--text--muted)' }}>
-                      Outcome
-                    </div>
-                    <div className="text-xs leading-snug" style={{ color: 'var(--_theme---base--text--secondary)' }}>
-                      {meta.outcome}
-                    </div>
-                  </div>
+                  <div className="mt-auto border-t pt-5" style={{ borderColor: 'var(--_theme---base--border--subtle)' }} />
                 </div>
               </motion.div>
             );
@@ -172,6 +218,67 @@ const Services: React.FC<ServicesProps> = ({ services }) => {
             Start a project <ArrowRight size={16} />
           </Link>
         </motion.div>
+
+        <Dialog open={Boolean(selectedService)} onOpenChange={(open) => !open && setSelectedService(null)}>
+          <DialogContent className="max-w-3xl p-0" hideCloseButton={false}>
+            {selectedService && (
+              <div className="p-6 sm:p-8">
+                <div className="flex items-start gap-4 mb-6 pr-10">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center border shrink-0"
+                    style={{
+                      backgroundColor: 'var(--_theme---base--surface--raised)',
+                      borderColor: 'var(--_theme---base--border--subtle)',
+                      color: 'var(--_theme---accent)',
+                    }}
+                  >
+                    <IconComponent name={selectedService.icon} className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-title text-2xl font-semibold" style={{ color: 'var(--_theme---base--text--primary)' }}>
+                      {selectedService.title}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-6">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                      Description
+                    </p>
+                    <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                      {selectedService.description}
+                    </p>
+                  </div>
+
+                  {(() => {
+                    const allFeatures = parseFeatures(selectedService.features);
+
+                    if (allFeatures.length === 0) return null;
+
+                    return (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--_theme---base--text--muted)' }}>
+                          Included
+                        </p>
+                        <div className="space-y-2">
+                          {allFeatures.map((feature, idx) => (
+                            <div key={idx} className="flex items-start gap-2.5">
+                              <LucideIcons.Check size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--_theme---accent)' }} />
+                              <span className="text-sm leading-relaxed" style={{ color: 'var(--_theme---base--text--secondary)' }}>
+                                {feature}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );
