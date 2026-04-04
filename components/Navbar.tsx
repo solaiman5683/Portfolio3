@@ -89,7 +89,7 @@ const Navbar: React.FC = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden overflow-hidden bg-[var(--_theme---base--surface--raised)] border-b border-[var(--_theme---base--border--subtle)]"
+            className="md:hidden overflow-hidden bg-black/50 backdrop-blur-xl border-b border-white/[0.2]"
           >
             <div className="px-6 py-8 flex flex-col gap-1">
               {navLinks.map((link, i) => (
