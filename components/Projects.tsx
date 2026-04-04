@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Github, ArrowUpRight, X, ChevronLeft, ChevronRight, Maximize2, ArrowRight, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -245,7 +244,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
       <Dialog open={!!selectedProject} onOpenChange={(open) => !open && closeModals()}>
         <DialogContent
           hideCloseButton
-          className="max-w-5xl w-full max-h-[92vh] p-0 bg-[#0c0c0e] border border-white/[0.07] overflow-hidden rounded-2xl"
+          className={`max-w-5xl w-full max-h-[92vh] p-0 bg-[#0c0c0e] border border-white/[0.07] rounded-2xl ${isLightboxOpen ? '!overflow-visible' : 'overflow-hidden'}`}
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
@@ -404,72 +403,79 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
               </div>
             </div>
           )}
+
+          {/* Lightbox stays in the dialog React subtree (not body) so Radix modal pointer-events still reach it */}
+          <AnimatePresence>
+            {isLightboxOpen && selectedProject && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[300] isolate"
+                role="presentation"
+              >
+                <div
+                  className="absolute inset-0 bg-black/95 cursor-zoom-out"
+                  onClick={() => setIsLightboxOpen(false)}
+                  aria-hidden
+                />
+
+                <motion.img
+                  key={currentImgIndex}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                  src={projectImages[currentImgIndex]}
+                  alt={`${selectedProject.title} — ${currentImgIndex + 1}`}
+                  className="absolute inset-0 m-auto max-w-[90vw] max-h-[90vh] object-contain pointer-events-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLightboxOpen(false);
+                  }}
+                  className="absolute top-5 right-5 z-20 p-2 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20"
+                  aria-label="Close fullscreen"
+                >
+                  <X size={16} />
+                </button>
+
+                {projectImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrev();
+                      }}
+                      className="absolute left-5 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNext();
+                      }}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 bg-white/[0.06] border border-white/[0.08] rounded-full text-[11px] text-white/50 pointer-events-none">
+                      {currentImgIndex + 1} / {projectImages.length}
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
-
-      {/* Lightbox — portal to body, layered structure to avoid click conflicts */}
-      {createPortal(
-        <AnimatePresence>
-          {isLightboxOpen && selectedProject && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9999]"
-            >
-              {/* Backdrop: click to close, sits behind everything */}
-              <div
-                className="absolute inset-0 bg-black/95 cursor-zoom-out"
-                onClick={() => setIsLightboxOpen(false)}
-              />
-
-              {/* Image: above backdrop, pointer-events-none so clicks pass to backdrop */}
-              <motion.img
-                key={currentImgIndex}
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2 }}
-                src={projectImages[currentImgIndex]}
-                className="absolute inset-0 m-auto max-w-[90vw] max-h-[90vh] object-contain pointer-events-none"
-              />
-
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={() => setIsLightboxOpen(false)}
-                className="absolute top-5 right-5 z-10 p-2 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20"
-              >
-                <X size={16} />
-              </button>
-
-              {/* Nav buttons: above image, independent of backdrop */}
-              {projectImages.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handlePrev}
-                    className="absolute left-5 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-all duration-200 border border-white/20 hover:scale-105"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-
-                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-white/[0.06] border border-white/[0.08] rounded-full text-[11px] text-white/50">
-                    {currentImgIndex + 1} / {projectImages.length}
-                  </div>
-                </>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
     </section>
   );
 };
