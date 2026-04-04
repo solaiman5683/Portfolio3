@@ -208,7 +208,7 @@ const Contact: React.FC<ContactProps> = ({ profile }) => {
                     className={`inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-semibold text-sm transition-all ${
                       success
                         ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                        : 'bg-white text-black hover:bg-white/90 active:scale-[0.99]'
+                        : 'bg-[#00D084] text-black hover:bg-white/90 active:scale-[0.99]'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                   {loading ? (

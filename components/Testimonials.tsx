@@ -138,7 +138,7 @@ const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
         >
           <Link
             to="/contact"
-            className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 via-primary-500 to-sky-500 shadow-[0_16px_40px_-20px_rgba(0,208,132,0.7)] hover:brightness-110 transition-all duration-300"
+            className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold text-black bg-[#00D084] shadow-[0_16px_40px_-20px_rgba(0,208,132,0.7)] hover:brightness-110 transition-all duration-300"
           >
             Join them — start a project
             <ArrowRight className="w-4 h-4" />

@@ -60,7 +60,7 @@ const Footer: React.FC<FooterProps> = ({ profile }) => {
             </div>
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm shrink-0 bg-white text-black hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm shrink-0 bg-[#00D084] text-black hover:bg-white/90 transition-colors"
             >
               Start a project <ArrowRight size={18} />
             </Link>

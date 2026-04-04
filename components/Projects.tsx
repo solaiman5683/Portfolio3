@@ -234,7 +234,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
           )}
           <button
             onClick={() => navigate('/contact')}
-            className="px-6 py-3 bg-white text-black rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-white/90 transition-colors shadow-[0_18px_60px_-28px_rgba(255,255,255,0.35)] border border-white/10"
+            className="px-6 py-3 bg-[#00D084] text-black rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-white/90 transition-colors shadow-[0_18px_60px_-28px_rgba(255,255,255,0.35)] border border-white/10"
           >
             Start a project <ArrowRight size={16} />
           </button>
