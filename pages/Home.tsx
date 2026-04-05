@@ -5,12 +5,13 @@ import Hero from '../components/Hero';
 import Skills from '../components/Skills';
 import Projects from '../components/Projects';
 import Services from '../components/Services';
+import Pricing from '../components/Pricing';
 import WhyChooseMe from '../components/WhyChooseMe';
 import Testimonials from '../components/Testimonials';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
 import { api } from '../lib/api';
-import { Profile, Skill, Project, SocialLink, Service, Testimonial, WhyChooseMe as WhyChooseMeType } from '../types';
+import { Profile, Skill, Project, SocialLink, Service, PricingPackage, Testimonial, WhyChooseMe as WhyChooseMeType } from '../types';
 
 const Home: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -18,6 +19,7 @@ const Home: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [socials, setSocials] = useState<SocialLink[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [pricingPackages, setPricingPackages] = useState<PricingPackage[]>([]);
   const [whyChooseMe, setWhyChooseMe] = useState<WhyChooseMeType[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,10 +37,18 @@ const Home: React.FC = () => {
           api.list<Testimonial>('testimonials'),
         ]);
 
+        let pricing: PricingPackage[] = [];
+        try {
+          pricing = await api.list<PricingPackage>('pricing_packages');
+        } catch {
+          /* table or route not deployed yet — hide pricing section */
+        }
+
         setProfile(prof as unknown as Profile);
         setSkills(sk);
         setSocials(soc);
         setServices(serv);
+        setPricingPackages(pricing);
         setWhyChooseMe(why);
         setTestimonials(test);
         // projects already include gallery from backend
@@ -67,6 +77,7 @@ const Home: React.FC = () => {
       <Hero profile={profile} socials={socials} />
       <Skills skills={skills} />
       {services.length > 0 && <Services services={services} />}
+      {pricingPackages.length > 0 && <Pricing packages={pricingPackages} />}
       {projects.length > 0 && <Projects projects={projects} isHomePage={true} />}
       {testimonials.length > 0 && <Testimonials testimonials={testimonials} />}
       {whyChooseMe.length > 0 && <WhyChooseMe items={whyChooseMe} />}

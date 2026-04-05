@@ -6,10 +6,10 @@ import * as LucideIcons from 'lucide-react';
 import {
   User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X,
   Upload, Loader2, Share2, Award, FileText, Globe, History, Layers,
-  Cpu, Star, Tag, Link as LinkIcon, Search, Video
+  Cpu, Star, Tag, Link as LinkIcon, Search, Video, DollarSign
 } from 'lucide-react';
 import {
-  Project, Skill, Profile, ContactMessage, Service, Testimonial,
+  Project, Skill, Profile, ContactMessage, Service, PricingPackage, Testimonial,
   SocialLink, WhyChooseMe, TimelineEntry, BlogPost, ProjectCategory
 } from '../types';
 import toast from 'react-hot-toast';
@@ -225,6 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [categories, setCategories] = useState<ProjectCategory[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [pricingPackages, setPricingPackages] = useState<PricingPackage[]>([]);
   const [whyChooseMe, setWhyChooseMe] = useState<WhyChooseMe[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -247,7 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     try {
       const tableMap: Record<string, string> = {
         profile: 'profile', socials: 'social_links', skills: 'skills',
-        services: 'services', projects: 'projects', categories: 'project_categories',
+        services: 'services', pricing: 'pricing_packages', projects: 'projects', categories: 'project_categories',
         blogs: 'blogs', testimonials: 'testimonials', messages: 'contact_messages',
         why: 'why_choose_me', timeline: 'timeline',
       };
@@ -260,6 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         if (activeTab === 'socials') setSocials(data);
         if (activeTab === 'skills') setSkills(data);
         if (activeTab === 'services') setServices(data);
+        if (activeTab === 'pricing') setPricingPackages(data);
         if (activeTab === 'timeline') setTimeline(data);
         if (activeTab === 'blogs') setBlogs(data);
         if (activeTab === 'projects') setProjects(data);
@@ -323,6 +325,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     try {
       const tableMap: Record<string, string> = {
         skills: 'skills', projects: 'projects', blogs: 'blogs', services: 'services',
+        pricing: 'pricing_packages',
         testimonials: 'testimonials', socials: 'social_links', why: 'why_choose_me',
         timeline: 'timeline', categories: 'project_categories',
       };
@@ -336,6 +339,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       }
       if (activeTab === 'projects')
         savePayload.gallery = galleryImages.map(url => ({ image_url: url }));
+      if (activeTab === 'pricing') {
+        if (typeof savePayload.features === 'string') {
+          savePayload.features = savePayload.features
+            .split(/\n|,/)
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        } else if (!Array.isArray(savePayload.features)) {
+          savePayload.features = [];
+        }
+        savePayload.is_popular = savePayload.is_popular ? 1 : 0;
+      }
       const tableName = tableMap[activeTab];
       if (isEditing) await api.update(tableName, id, savePayload);
       else await api.create(tableName, savePayload);
@@ -350,8 +364,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const handleLogout = () => { api.logout(); onLogout(); navigate('/admin'); };
 
+  const featuresToMultiline = (f: unknown): string => {
+    if (!f) return '';
+    if (Array.isArray(f)) return f.join('\n');
+    if (typeof f === 'string') {
+      try {
+        const p = JSON.parse(f);
+        if (Array.isArray(p)) return p.join('\n');
+      } catch { /* ignore */ }
+      return f;
+    }
+    return '';
+  };
+
   const openModal = (item: any = {}) => {
-    setCurrentItem({ gallery_type: 'image', type: 'experience', order_index: 0, ...item });
+    let next: Record<string, unknown> = { gallery_type: 'image', type: 'experience', order_index: 0, ...item };
+    if (activeTab === 'pricing') {
+      next = {
+        ...next,
+        features: featuresToMultiline(item.features),
+        order_index: item.order_index ?? 0,
+        is_popular: item.is_popular === 1 || item.is_popular === true ? 1 : 0,
+        cta_text: item.cta_text || 'Get started',
+        cta_href: item.cta_href || '/contact',
+      };
+    }
+    setCurrentItem(next);
     setIsEditing(!!item.id);
     setGalleryImages(activeTab === 'projects' && item.gallery ? item.gallery.map((g: any) => g.image_url) : []);
     setIsModalOpen(true);
@@ -488,6 +526,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </div>
       );
 
+      case 'pricing': return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pricingPackages.map(p => (
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center mb-3"><DollarSign size={18} className="text-emerald-600" /></div>
+              <p className="font-semibold text-gray-800 mb-0.5">{p.name}</p>
+              <p className="text-sm font-semibold text-emerald-600 mb-1">{p.price_display}</p>
+              {p.price_note && <p className="text-[11px] text-gray-400 mb-2">{p.price_note}</p>}
+              <p className="text-xs text-gray-500 line-clamp-2 mb-4">{p.description}</p>
+              <div className="flex gap-1">
+                <button className={iconBtn} onClick={() => openModal(p)}><Edit size={16}/></button>
+                <button className={delBtn(deleteConfirmId === p.id)} onClick={() => deleteItem('pricing_packages', p.id)}><Trash2 size={16}/></button>
+              </div>
+            </div>
+          ))}
+          {pricingPackages.length === 0 && <p className="text-gray-400 text-sm col-span-full text-center py-12">No pricing packages yet. Add one to show the Pricing section on the home page.</p>}
+        </div>
+      );
+
       case 'projects': return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map(p => (
@@ -590,6 +647,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     { id: 'projects', icon: <Briefcase size={16}/>, label: 'Projects' },
     { id: 'blogs', icon: <FileText size={16}/>, label: 'Blog' },
     { id: 'services', icon: <Layers size={16}/>, label: 'Services' },
+    { id: 'pricing', icon: <DollarSign size={16}/>, label: 'Pricing' },
     { id: 'timeline', icon: <History size={16}/>, label: 'Timeline' },
     { id: 'why', icon: <Award size={16}/>, label: 'Why Me' },
     { id: 'testimonials', icon: <Star size={16}/>, label: 'Testimonials' },
@@ -653,7 +711,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+          <div className={`bg-white w-full rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] ${activeTab === 'pricing' ? 'max-w-lg' : 'max-w-md'}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="font-bold text-gray-800">{isEditing ? 'Edit' : 'Add'} {tabLabel}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18}/></button>
@@ -723,6 +781,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Best For</label><input className={inp} placeholder="Brand identity, ads, social creatives" value={currentItem.best_for || ''} onChange={e => setCurrentItem({...currentItem, best_for: e.target.value})} /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Outcome</label><input className={inp} placeholder="Consistent visuals that convert" value={currentItem.outcome || ''} onChange={e => setCurrentItem({...currentItem, outcome: e.target.value})} /></div>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Icon</label><IconPicker value={currentItem.icon || ''} onChange={v => setCurrentItem({...currentItem, icon: v})} /></div>
+              </>)}
+
+              {activeTab === 'pricing' && (<>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Package name</label><input required className={inp} placeholder="e.g. Starter, Pro, Retainer" value={currentItem.name || ''} onChange={e => setCurrentItem({ ...currentItem, name: e.target.value })} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Subtitle (optional)</label><input className={inp} placeholder="e.g. Best for new brands" value={currentItem.subtitle || ''} onChange={e => setCurrentItem({ ...currentItem, subtitle: e.target.value })} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price display</label><input required className={inp} placeholder="e.g. $899 or ৳15,000" value={currentItem.price_display || ''} onChange={e => setCurrentItem({ ...currentItem, price_display: e.target.value })} /></div>
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Price note (optional)</label><input className={inp} placeholder="e.g. per project, /month" value={currentItem.price_note || ''} onChange={e => setCurrentItem({ ...currentItem, price_note: e.target.value })} /></div>
+                </div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Short description</label><textarea className={`${inp} h-20 resize-none`} placeholder="One or two sentences about this tier" value={currentItem.description || ''} onChange={e => setCurrentItem({ ...currentItem, description: e.target.value })} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Features (one per line)</label><textarea className={`${inp} h-28 resize-none font-mono text-xs`} placeholder={'Revision rounds\nSource files\nPriority support'} value={typeof currentItem.features === 'string' ? currentItem.features : ''} onChange={e => setCurrentItem({ ...currentItem, features: e.target.value })} /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sort order</label><input type="number" className={inp} value={currentItem.order_index ?? 0} onChange={e => setCurrentItem({ ...currentItem, order_index: Number(e.target.value) })} /></div>
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={Boolean(currentItem.is_popular)}
+                        onChange={e => setCurrentItem({ ...currentItem, is_popular: e.target.checked ? 1 : 0 })}
+                      />
+                      Highlight as “Most popular”
+                    </label>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Button label</label><input className={inp} placeholder="Get started" value={currentItem.cta_text || ''} onChange={e => setCurrentItem({ ...currentItem, cta_text: e.target.value })} /></div>
+                  <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Button link</label><input className={inp} placeholder="/contact or https://…" value={currentItem.cta_href || ''} onChange={e => setCurrentItem({ ...currentItem, cta_href: e.target.value })} /></div>
+                </div>
               </>)}
 
               {activeTab === 'timeline' && (<>

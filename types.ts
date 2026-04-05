@@ -69,6 +69,20 @@ export interface Service {
   features?: string; // Comma separated string of features
 }
 
+export interface PricingPackage {
+  id: string;
+  name: string;
+  subtitle?: string | null;
+  price_display: string;
+  price_note?: string | null;
+  description: string;
+  features?: string[] | string;
+  is_popular?: number | boolean;
+  order_index: number;
+  cta_text: string;
+  cta_href: string;
+}
+
 export interface WhyChooseMe {
   id: string;
   title: string;
