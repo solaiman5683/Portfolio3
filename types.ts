@@ -51,6 +51,7 @@ export interface Project {
   github_url: string;
   featured: boolean;
   category: string;
+  created_at?: string;
   gallery?: ProjectImage[];
 }
 
