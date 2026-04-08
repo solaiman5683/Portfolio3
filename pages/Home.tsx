@@ -23,6 +23,7 @@ const Home: React.FC = () => {
   const [whyChooseMe, setWhyChooseMe] = useState<WhyChooseMeType[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const featuredProjects = projects.filter((project) => project.isFeatured ?? project.featured);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +79,7 @@ const Home: React.FC = () => {
       <Skills skills={skills} />
       {services.length > 0 && <Services services={services} />}
       {pricingPackages.length > 0 && <Pricing packages={pricingPackages} />}
-      {projects.length > 0 && <Projects projects={projects} isHomePage={true} />}
+      {featuredProjects.length > 0 && <Projects projects={featuredProjects} isHomePage={true} />}
       {testimonials.length > 0 && <Testimonials testimonials={testimonials} />}
       {whyChooseMe.length > 0 && <WhyChooseMe items={whyChooseMe} />}
       <Contact profile={profile} />

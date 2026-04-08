@@ -1350,6 +1350,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Live URL</label><input className={inp} placeholder="https://..." value={currentItem.live_url || ''} onChange={e => setCurrentItem({...currentItem, live_url: e.target.value})} /></div>
                   <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">GitHub URL</label><input className={inp} placeholder="https://..." value={currentItem.github_url || ''} onChange={e => setCurrentItem({...currentItem, github_url: e.target.value})} /></div>
                 </div>
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={Boolean(currentItem.isFeatured ?? currentItem.featured)}
+                      onChange={e => setCurrentItem({
+                        ...currentItem,
+                        isFeatured: e.target.checked,
+                        featured: e.target.checked,
+                      })}
+                    />
+                    Show on Home page (isFeatured)
+                  </label>
+                </div>
               </>)}
 
               {activeTab === 'blogs' && (<>

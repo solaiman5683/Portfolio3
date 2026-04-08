@@ -54,11 +54,13 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
     return galleryUrls;
   }, [selectedProject]);
 
+  const hasGalleryImages = projectImages.length > 0;
+  const hasVideoMedia = Boolean(selectedProject?.video_url);
+
   useEffect(() => {
     if (selectedProject) {
-      const hasGallery = Boolean(selectedProject.image_url) || Boolean(selectedProject.gallery?.length);
-      if (hasGallery) setActiveTab('gallery');
-      else setActiveTab(selectedProject.gallery_type === 'video' ? 'video' : 'gallery');
+      if (selectedProject.video_url) setActiveTab('video');
+      else setActiveTab('gallery');
     }
   }, [selectedProject]);
 
@@ -256,7 +258,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
               {/* Left: media */}
               <div className="relative lg:w-[58%] shrink-0 bg-black overflow-hidden lg:rounded-l-2xl">
                 {/* Tab switcher */}
-                {selectedProject.video_url && (
+                {hasVideoMedia && hasGalleryImages && (
                   <div className="absolute top-3 left-3 z-50 flex gap-1 p-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/[0.08]">
                     <button
                       onClick={() => setActiveTab('gallery')}
@@ -278,10 +280,10 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                 )}
 
                 <div className="w-full h-full relative overflow-hidden bg-black">
-                  {activeTab === 'video' && selectedProject.video_url ? (
+                  {activeTab === 'video' && hasVideoMedia ? (
                     <iframe
-                      src={`${getEmbedUrl(selectedProject.video_url)}${getEmbedUrl(selectedProject.video_url).includes('?') ? '&' : '?'}rel=0&modestbranding=1&iv_load_policy=3`}
-                      className="w-full h-full"
+                      src={`${getEmbedUrl(selectedProject.video_url || '')}${getEmbedUrl(selectedProject.video_url || '').includes('?') ? '&' : '?'}rel=0&modestbranding=1&iv_load_policy=3`}
+                      className="w-full h-full min-h-[400px]"
                       frameBorder="0"
                       allow="autoplay; fullscreen; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen

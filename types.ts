@@ -50,6 +50,7 @@ export interface Project {
   live_url: string;
   github_url: string;
   featured: boolean;
+  isFeatured?: boolean;
   category: string;
   created_at?: string;
   gallery?: ProjectImage[];
