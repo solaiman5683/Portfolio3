@@ -6,8 +6,9 @@ import * as LucideIcons from 'lucide-react';
 import {
   User, Briefcase, MessageSquare, LogOut, Plus, Trash2, Edit, X,
   Upload, Loader2, Share2, Award, FileText, Globe, History, Layers,
-  Cpu, Star, Tag, Link as LinkIcon, Search, Video, DollarSign
+  Cpu, Star, Tag, Link as LinkIcon, Search, Video, DollarSign, LayoutGrid, Table2, ArrowUpDown
 } from 'lucide-react';
+import { Dialog, DialogContent } from '../components/ui/dialog';
 import {
   Project, Skill, Profile, ContactMessage, Service, PricingPackage, Testimonial,
   SocialLink, WhyChooseMe, TimelineEntry, BlogPost, ProjectCategory
@@ -208,6 +209,9 @@ const inp = 'w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-800 te
 const card = 'bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow';
 const iconBtn = 'p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors';
 const delBtn = (active: boolean) => `p-2 rounded-lg transition-colors ${active ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`;
+const PROJECTS_TABLE_PAGE_SIZE = 10;
+const BLOGS_TABLE_PAGE_SIZE = 10;
+const MESSAGES_TABLE_PAGE_SIZE = 10;
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -233,6 +237,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [currentItem, setCurrentItem] = useState<any>({});
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [projectQuery, setProjectQuery] = useState('');
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState('all');
+  const [projectViewMode, setProjectViewMode] = useState<'grid' | 'table'>('grid');
+  const [projectSortKey, setProjectSortKey] = useState<'title' | 'category' | 'gallery_type' | 'created_at'>('created_at');
+  const [projectSortDir, setProjectSortDir] = useState<'asc' | 'desc'>('desc');
+  const [projectPage, setProjectPage] = useState(1);
+  const [blogQuery, setBlogQuery] = useState('');
+  const [blogCategoryFilter, setBlogCategoryFilter] = useState('all');
+  const [blogViewMode, setBlogViewMode] = useState<'grid' | 'table'>('grid');
+  const [blogSortKey, setBlogSortKey] = useState<'title' | 'category' | 'read_time' | 'created_at'>('created_at');
+  const [blogSortDir, setBlogSortDir] = useState<'asc' | 'desc'>('desc');
+  const [blogPage, setBlogPage] = useState(1);
+  const [messagesPage, setMessagesPage] = useState(1);
 
   useEffect(() => {
     fetchData();
@@ -376,6 +393,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
     return '';
   };
+  const formatHumanDate = (value?: string) => {
+    if (!value) return '-';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return '-';
+    const datePart = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(dt);
+    const timePart = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(dt);
+    return `${datePart}, ${timePart}`;
+  };
 
   const openModal = (item: any = {}) => {
     let next: Record<string, unknown> = { gallery_type: 'image', type: 'experience', order_index: 0, ...item };
@@ -393,6 +426,154 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     setIsEditing(!!item.id);
     setGalleryImages(activeTab === 'projects' && item.gallery ? item.gallery.map((g: any) => g.image_url) : []);
     setIsModalOpen(true);
+  };
+
+  const projectCategoryOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    categories.forEach((c) => c.name && set.add(c.name));
+    projects.forEach((p) => p.category && set.add(p.category));
+    return ['all', ...Array.from(set)];
+  }, [categories, projects]);
+
+  const filteredProjects = React.useMemo(() => {
+    const q = projectQuery.trim().toLowerCase();
+    return projects.filter((p) => {
+      const matchesCategory = projectCategoryFilter === 'all' || p.category === projectCategoryFilter;
+      if (!matchesCategory) return false;
+      if (!q) return true;
+      return [p.title, p.category, p.description]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(q));
+    });
+  }, [projects, projectCategoryFilter, projectQuery]);
+
+  const sortedProjects = React.useMemo(() => {
+    const items = [...filteredProjects];
+    items.sort((a, b) => {
+      const aValue = (a as any)[projectSortKey] ?? '';
+      const bValue = (b as any)[projectSortKey] ?? '';
+      let result = 0;
+      if (projectSortKey === 'created_at') {
+        result = new Date(String(aValue || 0)).getTime() - new Date(String(bValue || 0)).getTime();
+      } else {
+        result = String(aValue).localeCompare(String(bValue), undefined, { sensitivity: 'base' });
+      }
+      return projectSortDir === 'asc' ? result : -result;
+    });
+    return items;
+  }, [filteredProjects, projectSortDir, projectSortKey]);
+
+  const projectsTotalPages = Math.max(1, Math.ceil(sortedProjects.length / PROJECTS_TABLE_PAGE_SIZE));
+  const normalizedProjectPage = Math.min(projectPage, projectsTotalPages);
+
+  const paginatedTableProjects = React.useMemo(() => {
+    const start = (normalizedProjectPage - 1) * PROJECTS_TABLE_PAGE_SIZE;
+    const end = start + PROJECTS_TABLE_PAGE_SIZE;
+    return sortedProjects.slice(start, end);
+  }, [normalizedProjectPage, sortedProjects]);
+
+  useEffect(() => {
+    setProjectPage(1);
+  }, [projectQuery, projectCategoryFilter, projectSortKey, projectSortDir]);
+
+  useEffect(() => {
+    if (projectPage !== normalizedProjectPage) {
+      setProjectPage(normalizedProjectPage);
+    }
+  }, [normalizedProjectPage, projectPage]);
+
+  const toggleProjectSort = (key: 'title' | 'category' | 'gallery_type' | 'created_at') => {
+    if (projectSortKey === key) {
+      setProjectSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setProjectSortKey(key);
+    setProjectSortDir(key === 'title' || key === 'category' ? 'asc' : 'desc');
+  };
+
+  const blogCategoryOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    blogs.forEach((b) => b.category && set.add(b.category));
+    return ['all', ...Array.from(set)];
+  }, [blogs]);
+
+  const filteredBlogs = React.useMemo(() => {
+    const q = blogQuery.trim().toLowerCase();
+    return blogs.filter((b) => {
+      const matchesCategory = blogCategoryFilter === 'all' || b.category === blogCategoryFilter;
+      if (!matchesCategory) return false;
+      if (!q) return true;
+      return [b.title, b.category, b.content, b.read_time]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(q));
+    });
+  }, [blogCategoryFilter, blogQuery, blogs]);
+
+  const sortedBlogs = React.useMemo(() => {
+    const items = [...filteredBlogs];
+    items.sort((a, b) => {
+      const aValue = (a as any)[blogSortKey] ?? '';
+      const bValue = (b as any)[blogSortKey] ?? '';
+      let result = 0;
+      if (blogSortKey === 'created_at') {
+        result = new Date(String(aValue || 0)).getTime() - new Date(String(bValue || 0)).getTime();
+      } else {
+        result = String(aValue).localeCompare(String(bValue), undefined, { sensitivity: 'base' });
+      }
+      return blogSortDir === 'asc' ? result : -result;
+    });
+    return items;
+  }, [blogSortDir, blogSortKey, filteredBlogs]);
+
+  const blogsTotalPages = Math.max(1, Math.ceil(sortedBlogs.length / BLOGS_TABLE_PAGE_SIZE));
+  const normalizedBlogPage = Math.min(blogPage, blogsTotalPages);
+
+  const paginatedTableBlogs = React.useMemo(() => {
+    const start = (normalizedBlogPage - 1) * BLOGS_TABLE_PAGE_SIZE;
+    const end = start + BLOGS_TABLE_PAGE_SIZE;
+    return sortedBlogs.slice(start, end);
+  }, [normalizedBlogPage, sortedBlogs]);
+
+  const sortedMessages = React.useMemo(() => {
+    return [...messages].sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+  }, [messages]);
+
+  const messagesTotalPages = Math.max(1, Math.ceil(sortedMessages.length / MESSAGES_TABLE_PAGE_SIZE));
+  const normalizedMessagesPage = Math.min(messagesPage, messagesTotalPages);
+
+  const paginatedMessages = React.useMemo(() => {
+    const start = (normalizedMessagesPage - 1) * MESSAGES_TABLE_PAGE_SIZE;
+    const end = start + MESSAGES_TABLE_PAGE_SIZE;
+    return sortedMessages.slice(start, end);
+  }, [normalizedMessagesPage, sortedMessages]);
+
+  useEffect(() => {
+    if (messagesPage !== normalizedMessagesPage) {
+      setMessagesPage(normalizedMessagesPage);
+    }
+  }, [messagesPage, normalizedMessagesPage]);
+
+  useEffect(() => {
+    setBlogPage(1);
+  }, [blogQuery, blogCategoryFilter, blogSortKey, blogSortDir]);
+
+  useEffect(() => {
+    if (blogPage !== normalizedBlogPage) {
+      setBlogPage(normalizedBlogPage);
+    }
+  }, [blogPage, normalizedBlogPage]);
+
+  const toggleBlogSort = (key: 'title' | 'category' | 'read_time' | 'created_at') => {
+    if (blogSortKey === key) {
+      setBlogSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setBlogSortKey(key);
+    setBlogSortDir(key === 'title' || key === 'category' || key === 'read_time' ? 'asc' : 'desc');
   };
 
   const UploadField = ({
@@ -493,7 +674,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           {socials.map(s => (
             <div key={s.id} className={card}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center"><LinkIcon size={18} className="text-purple-600" /></div>
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  {(() => {
+                    const SocialIcon = (LucideIcons as any)[s.icon];
+                    return SocialIcon ? <SocialIcon size={18} className="text-purple-600" /> : <LinkIcon size={18} className="text-purple-600" />;
+                  })()}
+                </div>
                 <div><p className="font-semibold text-gray-800 text-sm">{s.platform}</p><p className="text-xs text-gray-400 truncate max-w-[140px]">{s.url}</p></div>
               </div>
               <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(s)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === s.id)} onClick={() => deleteItem('social_links', s.id)}><Trash2 size={16}/></button></div>
@@ -546,32 +732,385 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       );
 
       case 'projects': return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {projects.map(p => (
-            <div key={p.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              {p.image_url && <img src={p.image_url} className="w-full h-40 object-cover" alt={p.title} />}
-              <div className="p-4">
-                <p className="font-semibold text-gray-800 mb-1">{p.title}</p>
-                <p className="text-xs text-gray-400 mb-3">{p.category}</p>
-                <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(p)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === p.id)} onClick={() => deleteItem('projects', p.id)}><Trash2 size={16}/></button></div>
+        <div className="space-y-5">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Project Library</p>
+                <p className="text-xs text-gray-500">Showing {sortedProjects.length} of {projects.length} projects</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={projectQuery}
+                    onChange={(e) => setProjectQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search projects"
+                  />
+                </div>
+                <select
+                  value={projectCategoryFilter}
+                  onChange={(e) => setProjectCategoryFilter(e.target.value)}
+                  className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {projectCategoryOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name === 'all' ? 'All categories' : name}
+                    </option>
+                  ))}
+                </select>
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setProjectViewMode('grid')}
+                    className={`px-3 py-2 text-sm inline-flex items-center gap-1.5 transition-colors ${projectViewMode === 'grid' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    aria-label="Grid mode"
+                  >
+                    <LayoutGrid size={15} />
+                    Grid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProjectViewMode('table')}
+                    className={`px-3 py-2 text-sm inline-flex items-center gap-1.5 border-l border-gray-200 transition-colors ${projectViewMode === 'table' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    aria-label="Table mode"
+                  >
+                    <Table2 size={15} />
+                    Table
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
+          </div>
+
+          {projectViewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {sortedProjects.map((p) => (
+                <div key={p.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-gray-100">
+                    {p.image_url ? (
+                      <img src={p.image_url} className="w-full h-full object-cover" alt={p.title} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No thumbnail</div>
+                    )}
+                    <span className="absolute left-3 top-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/90 text-gray-700 border border-gray-200">
+                      {p.category || 'Uncategorized'}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <p className="font-semibold text-gray-800 mb-1 line-clamp-1">{p.title}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2 min-h-[2.25rem] mb-4">
+                      {p.description || 'No description provided'}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-gray-400 uppercase tracking-wide">{p.gallery_type === 'video' ? 'Video' : 'Image'}</span>
+                      <div className="flex items-center gap-1">
+                        <button className={iconBtn} onClick={() => openModal(p)} aria-label={`Edit ${p.title}`}><Edit size={16}/></button>
+                        <button className={delBtn(deleteConfirmId === p.id)} onClick={() => deleteItem('projects', p.id)} aria-label={`Delete ${p.title}`}><Trash2 size={16}/></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-[980px] w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th className="px-4 py-3">Preview</th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleProjectSort('title')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Title <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleProjectSort('category')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Category <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleProjectSort('gallery_type')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Media <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-center">Gallery</th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleProjectSort('created_at')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Created <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedTableProjects.map((p) => {
+                      const galleryCount = Array.isArray((p as any).gallery) ? (p as any).gallery.length : 0;
+                      return (
+                        <tr key={p.id} className="border-b last:border-b-0 border-gray-100 hover:bg-gray-50/80">
+                          <td className="px-4 py-3">
+                            <div className="w-16 h-11 rounded-md border border-gray-200 overflow-hidden bg-gray-100">
+                              {p.image_url ? (
+                                <img src={p.image_url} alt={p.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-gray-800 font-medium max-w-[260px]">
+                            <p className="line-clamp-1">{p.title}</p>
+                            <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{p.description || 'No description'}</p>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">{p.category || 'Uncategorized'}</td>
+                          <td className="px-4 py-3 text-gray-600 capitalize">{p.gallery_type || 'image'}</td>
+                          <td className="px-4 py-3 text-center text-gray-600">{galleryCount}</td>
+                          <td className="px-4 py-3 text-gray-600">{formatHumanDate(p.created_at)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <button className={iconBtn} onClick={() => openModal(p)} aria-label={`Edit ${p.title}`}><Edit size={16}/></button>
+                              <button className={delBtn(deleteConfirmId === p.id)} onClick={() => deleteItem('projects', p.id)} aria-label={`Delete ${p.title}`}><Trash2 size={16}/></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {sortedProjects.length > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50/70">
+                  <p className="text-xs text-gray-500">
+                    Showing {(normalizedProjectPage - 1) * PROJECTS_TABLE_PAGE_SIZE + 1} to {Math.min(normalizedProjectPage * PROJECTS_TABLE_PAGE_SIZE, sortedProjects.length)} of {sortedProjects.length} items
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setProjectPage((p) => Math.max(1, p - 1))}
+                      disabled={normalizedProjectPage === 1}
+                      className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Prev
+                    </button>
+                    {Array.from({ length: projectsTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setProjectPage(pageNum)}
+                        className={`min-w-8 px-2 py-1.5 text-xs rounded-md border ${normalizedProjectPage === pageNum ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setProjectPage((p) => Math.min(projectsTotalPages, p + 1))}
+                      disabled={normalizedProjectPage === projectsTotalPages}
+                      className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {sortedProjects.length === 0 && (
+              <div className="col-span-full bg-white border border-dashed border-gray-300 rounded-2xl p-10 text-center">
+                <p className="text-sm font-semibold text-gray-700 mb-1">No projects found</p>
+                <p className="text-xs text-gray-500">Try changing the search text or category filter.</p>
+              </div>
+            )}
         </div>
       );
 
       case 'blogs': return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {blogs.map(b => (
-            <div key={b.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              {b.image_url && <img src={b.image_url} className="w-full h-36 object-cover" />}
-              <div className="p-4">
-                <p className="font-semibold text-gray-800 mb-1 line-clamp-1">{b.title}</p>
-                <p className="text-xs text-gray-400 mb-3">{b.category} · {b.read_time}</p>
-                <div className="flex gap-1"><button className={iconBtn} onClick={() => openModal(b)}><Edit size={16}/></button><button className={delBtn(deleteConfirmId === b.id)} onClick={() => deleteItem('blogs', b.id)}><Trash2 size={16}/></button></div>
+        <div className="space-y-5">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-5 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Blog Library</p>
+                <p className="text-xs text-gray-500">Showing {sortedBlogs.length} of {blogs.length} posts</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={blogQuery}
+                    onChange={(e) => setBlogQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search posts"
+                  />
+                </div>
+                <select
+                  value={blogCategoryFilter}
+                  onChange={(e) => setBlogCategoryFilter(e.target.value)}
+                  className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {blogCategoryOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name === 'all' ? 'All categories' : name}
+                    </option>
+                  ))}
+                </select>
+                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setBlogViewMode('grid')}
+                    className={`px-3 py-2 text-sm inline-flex items-center gap-1.5 transition-colors ${blogViewMode === 'grid' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    aria-label="Grid mode"
+                  >
+                    <LayoutGrid size={15} />
+                    Grid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBlogViewMode('table')}
+                    className={`px-3 py-2 text-sm inline-flex items-center gap-1.5 border-l border-gray-200 transition-colors ${blogViewMode === 'table' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    aria-label="Table mode"
+                  >
+                    <Table2 size={15} />
+                    Table
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
+          </div>
+
+          {blogViewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {sortedBlogs.map((b) => (
+                <div key={b.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-gray-100">
+                    {b.image_url ? (
+                      <img src={b.image_url} className="w-full h-full object-cover" alt={b.title} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No cover image</div>
+                    )}
+                    <span className="absolute left-3 top-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/90 text-gray-700 border border-gray-200">
+                      {b.category || 'Uncategorized'}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <p className="font-semibold text-gray-800 mb-1 line-clamp-1">{b.title}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2 min-h-[2.25rem] mb-4">{b.content || 'No content preview'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-gray-400 uppercase tracking-wide">{b.read_time || 'N/A'}</span>
+                      <div className="flex items-center gap-1">
+                        <button className={iconBtn} onClick={() => openModal(b)} aria-label={`Edit ${b.title}`}><Edit size={16}/></button>
+                        <button className={delBtn(deleteConfirmId === b.id)} onClick={() => deleteItem('blogs', b.id)} aria-label={`Delete ${b.title}`}><Trash2 size={16}/></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-[980px] w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      <th className="px-4 py-3">Preview</th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleBlogSort('title')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Title <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleBlogSort('category')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Category <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleBlogSort('read_time')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Read time <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button type="button" onClick={() => toggleBlogSort('created_at')} className="inline-flex items-center gap-1 hover:text-gray-700">
+                          Created <ArrowUpDown size={13} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedTableBlogs.map((b) => (
+                      <tr key={b.id} className="border-b last:border-b-0 border-gray-100 hover:bg-gray-50/80">
+                        <td className="px-4 py-3">
+                          <div className="w-16 h-11 rounded-md border border-gray-200 overflow-hidden bg-gray-100">
+                            {b.image_url ? (
+                              <img src={b.image_url} alt={b.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-800 font-medium max-w-[300px]">
+                          <p className="line-clamp-1">{b.title}</p>
+                          <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{b.content || 'No content preview'}</p>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{b.category || 'Uncategorized'}</td>
+                        <td className="px-4 py-3 text-gray-600">{b.read_time || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{formatHumanDate(b.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button className={iconBtn} onClick={() => openModal(b)} aria-label={`Edit ${b.title}`}><Edit size={16}/></button>
+                            <button className={delBtn(deleteConfirmId === b.id)} onClick={() => deleteItem('blogs', b.id)} aria-label={`Delete ${b.title}`}><Trash2 size={16}/></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {sortedBlogs.length > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50/70">
+                  <p className="text-xs text-gray-500">
+                    Showing {(normalizedBlogPage - 1) * BLOGS_TABLE_PAGE_SIZE + 1} to {Math.min(normalizedBlogPage * BLOGS_TABLE_PAGE_SIZE, sortedBlogs.length)} of {sortedBlogs.length} items
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setBlogPage((p) => Math.max(1, p - 1))}
+                      disabled={normalizedBlogPage === 1}
+                      className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Prev
+                    </button>
+                    {Array.from({ length: blogsTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setBlogPage(pageNum)}
+                        className={`min-w-8 px-2 py-1.5 text-xs rounded-md border ${normalizedBlogPage === pageNum ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setBlogPage((p) => Math.min(blogsTotalPages, p + 1))}
+                      disabled={normalizedBlogPage === blogsTotalPages}
+                      className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {sortedBlogs.length === 0 && (
+            <div className="col-span-full bg-white border border-dashed border-gray-300 rounded-2xl p-10 text-center">
+              <p className="text-sm font-semibold text-gray-700 mb-1">No blog posts found</p>
+              <p className="text-xs text-gray-500">Try changing the search text or category filter.</p>
+            </div>
+          )}
         </div>
       );
 
@@ -620,18 +1159,75 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       );
 
       case 'messages': return (
-        <div className="space-y-3 max-w-3xl">
-          {messages.map(m => (
-            <div key={m.id} className={`bg-white border rounded-xl p-5 shadow-sm ${m.is_read ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}>
-              <div className="flex justify-between items-start mb-2">
-                <div><p className="font-semibold text-gray-800">{m.name} <span className="text-blue-500 font-normal text-sm">— {m.email}</span></p><p className="text-xs text-gray-400">{new Date(m.created_at).toLocaleDateString()}</p></div>
-                <button className={delBtn(deleteConfirmId === m.id)} onClick={() => deleteItem('contact_messages', m.id)}><Trash2 size={16}/></button>
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1100px] w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3">Sender</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Subject</th>
+                  <th className="px-4 py-3">Message</th>
+                  <th className="px-4 py-3">Received</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedMessages.map((m) => (
+                  <tr key={m.id} className={`border-b last:border-b-0 border-gray-100 hover:bg-gray-50/80 ${m.is_read ? '' : 'bg-blue-50/40'}`}>
+                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{m.name}</td>
+                    <td className="px-4 py-3 text-blue-600 whitespace-nowrap">{m.email}</td>
+                    <td className="px-4 py-3 text-gray-700 max-w-[220px]"><p className="line-clamp-1">{m.subject}</p></td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[480px]"><p className="line-clamp-2">{m.message}</p></td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatHumanDate(m.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button className={delBtn(deleteConfirmId === m.id)} onClick={() => deleteItem('contact_messages', m.id)} aria-label={`Delete message from ${m.name}`}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {sortedMessages.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50/70">
+              <p className="text-xs text-gray-500">
+                Showing {(normalizedMessagesPage - 1) * MESSAGES_TABLE_PAGE_SIZE + 1} to {Math.min(normalizedMessagesPage * MESSAGES_TABLE_PAGE_SIZE, sortedMessages.length)} of {sortedMessages.length} items
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setMessagesPage((p) => Math.max(1, p - 1))}
+                  disabled={normalizedMessagesPage === 1}
+                  className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: messagesTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setMessagesPage(pageNum)}
+                    className={`min-w-8 px-2 py-1.5 text-xs rounded-md border ${normalizedMessagesPage === pageNum ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setMessagesPage((p) => Math.min(messagesTotalPages, p + 1))}
+                  disabled={normalizedMessagesPage === messagesTotalPages}
+                  className="px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
-              <p className="text-sm font-semibold text-gray-700 mb-1">{m.subject}</p>
-              <p className="text-sm text-gray-500">{m.message}</p>
             </div>
-          ))}
-          {messages.length === 0 && <p className="text-gray-400 text-sm text-center py-16">No messages yet.</p>}
+          )}
+          {sortedMessages.length === 0 && <p className="text-gray-400 text-sm text-center py-16">No messages yet.</p>}
         </div>
       );
 
@@ -708,10 +1304,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </div>
       </main>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className={`bg-white w-full rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] ${activeTab === 'pricing' ? 'max-w-lg' : 'max-w-md'}`}>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent
+          hideCloseButton
+          className={`bg-white border border-gray-200 shadow-2xl ${activeTab === 'pricing' ? 'max-w-lg' : 'max-w-md'}`}
+          style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}
+        >
+          <div className="max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="font-bold text-gray-800">{isEditing ? 'Edit' : 'Add'} {tabLabel}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18}/></button>
@@ -851,8 +1450,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

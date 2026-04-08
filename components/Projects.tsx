@@ -49,13 +49,9 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
   const projectImages = useMemo(() => {
     if (!selectedProject) return [];
     const gallery = selectedProject.gallery || [];
-    const mainImg = selectedProject.image_url;
     const galleryUrls = gallery.map(g => g.image_url);
-    
-    if (mainImg && !galleryUrls.includes(mainImg)) {
-      return [mainImg, ...galleryUrls];
-    }
-    return galleryUrls.length > 0 ? galleryUrls : [mainImg];
+
+    return galleryUrls;
   }, [selectedProject]);
 
   useEffect(() => {
@@ -245,8 +241,6 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
         <DialogContent
           hideCloseButton
           className={`max-w-5xl w-full max-h-[92vh] p-0 bg-[#0c0c0e] border border-white/[0.07] rounded-2xl ${isLightboxOpen ? '!overflow-visible' : 'overflow-hidden'}`}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
         >
           {selectedProject && (
             <div className="relative flex flex-col lg:flex-row max-h-[92vh]">
@@ -283,7 +277,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                   </div>
                 )}
 
-                <div className="w-full h-[260px] sm:h-[380px] lg:h-[520px] relative overflow-hidden">
+                <div className="w-full h-full relative overflow-hidden bg-black">
                   {activeTab === 'video' && selectedProject.video_url ? (
                     <iframe
                       src={`${getEmbedUrl(selectedProject.video_url)}${getEmbedUrl(selectedProject.video_url).includes('?') ? '&' : '?'}rel=0&modestbranding=1&iv_load_policy=3`}
@@ -300,12 +294,16 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                         className="w-full h-full flex overflow-x-auto snap-x snap-mandatory"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
-                        {projectImages.map((url, i) => (
-                          <div key={i} className="w-full h-full shrink-0 snap-center relative bg-black">
+                        {projectImages.length > 0 ? projectImages.map((url, i) => (
+                          <div key={i} className="w-full h-full shrink-0 snap-center relative bg-black flex items-center justify-center">
                             <img src={url} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-[0.15] scale-110" alt="" loading="lazy" />
-                            <img src={url} className="relative z-10 w-full h-full object-contain" alt={`${selectedProject.title} ${i + 1}`} loading="lazy" />
+                            <img src={url} className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain object-center" alt={`${selectedProject.title} ${i + 1}`} loading="lazy" />
                           </div>
-                        ))}
+                        )) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/45 text-sm">
+                            No gallery images available
+                          </div>
+                        )}
                       </div>
 
                       {projectImages.length > 1 && (
