@@ -78,8 +78,8 @@ const Home: React.FC = () => {
       <Hero profile={profile} socials={socials} />
       <Skills skills={skills} />
       {services.length > 0 && <Services services={services} />}
-      {pricingPackages.length > 0 && <Pricing packages={pricingPackages} />}
       {featuredProjects.length > 0 && <Projects projects={featuredProjects} isHomePage={true} />}
+      {pricingPackages.length > 0 && <Pricing packages={pricingPackages} />}
       {testimonials.length > 0 && <Testimonials testimonials={testimonials} />}
       {whyChooseMe.length > 0 && <WhyChooseMe items={whyChooseMe} />}
       <Contact profile={profile} />
