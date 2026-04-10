@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Github, ArrowUpRight, X, ChevronLeft, ChevronRight, Maximize2, ArrowRight, Play } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ExternalLink, Github, ArrowUpRight, X, ChevronLeft, ChevronRight, Maximize2, ArrowRight, Play, Share2, Check } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Project } from '../types';
 import { Dialog, DialogContent } from './ui/dialog';
 
@@ -17,8 +17,11 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'gallery' | 'video'>('gallery');
+  const [copied, setCopied] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const isClosingFromUserRef = useRef(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const categories = ['All', ...Array.from(new Set(projects.map(p => p.category)))];
 
@@ -93,11 +96,106 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
     }
   }, [projectImages, currentImgIndex, scrollToImage, isLightboxOpen]);
 
-  const closeModals = () => {
+  const closeModals = useCallback(() => {
+    isClosingFromUserRef.current = true;
+    const params = new URLSearchParams(location.search);
+    if (params.has('p') || params.has('project')) {
+      params.delete('p');
+      params.delete('project');
+      const nextSearch = params.toString();
+      navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true });
+    }
     setSelectedProject(null);
     setIsLightboxOpen(false);
     setCurrentImgIndex(0);
-  };
+    setCopied(false);
+  }, [location.pathname, location.search, navigate]);
+
+  const buildProjectUrl = useCallback((project: Project) => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(location.search);
+    const projectKey = String(project.slug || project.id || '').trim();
+    if (!projectKey) return '';
+    params.set('p', projectKey);
+    params.delete('project');
+    const query = params.toString();
+    return `${window.location.origin}${location.pathname}${query ? `?${query}` : ''}`;
+  }, [location.pathname, location.search]);
+
+  const handleShareProject = useCallback(async () => {
+    if (!selectedProject) return;
+
+    const shareUrl = buildProjectUrl(selectedProject);
+    if (!shareUrl) return;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error('Share copy failed:', error);
+    }
+  }, [buildProjectUrl, selectedProject]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const projectKeyFromQuery = params.get('p') || params.get('project');
+
+    if (!projectKeyFromQuery) {
+      isClosingFromUserRef.current = false;
+      return;
+    }
+
+    if (isClosingFromUserRef.current) return;
+
+    if (projects.length === 0) return;
+
+    const normalizedKey = projectKeyFromQuery.trim().toLowerCase();
+    const matchedProject = projects.find((project) => {
+      const slugMatch = String(project.slug || '').trim().toLowerCase() === normalizedKey;
+      const legacyIdMatch = String(project.id).trim().toLowerCase() === normalizedKey;
+      return slugMatch || legacyIdMatch;
+    });
+    if (matchedProject && (!selectedProject || String(selectedProject.id) !== String(matchedProject.id))) {
+      setSelectedProject(matchedProject);
+      setCurrentImgIndex(0);
+    }
+  }, [location.search, projects, selectedProject]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const currentParam = params.get('p') || params.get('project');
+    const selectedSlug = selectedProject ? String(selectedProject.slug || selectedProject.id).trim() : null;
+
+    if (selectedSlug && currentParam !== selectedSlug) {
+      params.set('p', selectedSlug);
+      params.delete('project');
+      navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+    }
+
+    if (!selectedSlug && currentParam) {
+      params.delete('p');
+      params.delete('project');
+      const nextSearch = params.toString();
+      navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true });
+    }
+    if (!selectedSlug && !currentParam) {
+      isClosingFromUserRef.current = false;
+    }
+  }, [location.pathname, location.search, navigate, selectedProject]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -350,6 +448,15 @@ const Projects: React.FC<ProjectsProps> = ({ projects, isHomePage = false }) => 
                   <h2 className="font-title text-2xl sm:text-[1.75rem] font-bold text-white leading-tight tracking-tight mb-5">
                     {selectedProject.title}
                   </h2>
+
+                  <button
+                    type="button"
+                    onClick={handleShareProject}
+                    className="mb-5 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white/75 hover:text-white hover:bg-white/[0.09] transition-colors text-xs font-semibold"
+                  >
+                    {copied ? <Check size={14} /> : <Share2 size={14} />}
+                    {copied ? 'Link copied' : 'Share project'}
+                  </button>
 
                   <div className="h-px bg-white/[0.05] mb-5" />
 

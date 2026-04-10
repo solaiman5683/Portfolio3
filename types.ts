@@ -41,6 +41,7 @@ export interface ProjectImage {
 
 export interface Project {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   image_url: string;

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useNavigate, Link } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
@@ -213,6 +213,19 @@ const PROJECTS_TABLE_PAGE_SIZE = 10;
 const BLOGS_TABLE_PAGE_SIZE = 10;
 const MESSAGES_TABLE_PAGE_SIZE = 10;
 
+const createSlugFromTitle = (value: string): string => {
+  const normalized = (value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  return normalized
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
@@ -236,6 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [socials, setSocials] = useState<SocialLink[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [currentItem, setCurrentItem] = useState<any>({});
+  const [projectSlugManuallyEdited, setProjectSlugManuallyEdited] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [projectQuery, setProjectQuery] = useState('');
   const [projectCategoryFilter, setProjectCategoryFilter] = useState('all');
@@ -353,6 +367,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         } else if (!Array.isArray(savePayload.tech_stack)) {
           savePayload.tech_stack = [];
         }
+        if (typeof savePayload.slug === 'string') {
+          savePayload.slug = savePayload.slug.trim();
+        }
       }
       if (activeTab === 'projects')
         savePayload.gallery = galleryImages.map(url => ({ image_url: url }));
@@ -412,6 +429,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const openModal = (item: any = {}) => {
     let next: Record<string, unknown> = { gallery_type: 'image', type: 'experience', order_index: 0, ...item };
+    const isProjectTab = activeTab === 'projects';
+    const hasExistingSlug = typeof item.slug === 'string' && item.slug.trim().length > 0;
+
+    if (isProjectTab) {
+      next = {
+        ...next,
+        slug: hasExistingSlug ? item.slug : createSlugFromTitle(String(item.title || '')),
+      };
+    }
     if (activeTab === 'pricing') {
       next = {
         ...next,
@@ -424,9 +450,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
     setCurrentItem(next);
     setIsEditing(!!item.id);
+    setProjectSlugManuallyEdited(isProjectTab ? (Boolean(item.id) && hasExistingSlug) : false);
     setGalleryImages(activeTab === 'projects' && item.gallery ? item.gallery.map((g: any) => g.image_url) : []);
     setIsModalOpen(true);
   };
+
+  const handleProjectTitleChange = useCallback((title: string) => {
+    setCurrentItem((prev: any) => {
+      const next = { ...prev, title };
+      const currentSlug = typeof prev.slug === 'string' ? prev.slug : '';
+      if (!projectSlugManuallyEdited || !currentSlug.trim()) {
+        next.slug = createSlugFromTitle(title);
+      }
+      return next;
+    });
+  }, [projectSlugManuallyEdited]);
+
+  const handleProjectSlugChange = useCallback((slugInput: string) => {
+    setProjectSlugManuallyEdited(true);
+    setCurrentItem((prev: any) => ({
+      ...prev,
+      slug: createSlugFromTitle(slugInput),
+    }));
+  }, []);
 
   const projectCategoryOptions = React.useMemo(() => {
     const set = new Set<string>();
@@ -1318,7 +1364,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
             <form onSubmit={handleSubmitItem} className="p-6 space-y-4">
               {activeTab === 'projects' && (<>
-                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} placeholder="Project title" value={currentItem.title || ''} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label><input required className={inp} placeholder="Project title" value={currentItem.title || ''} onChange={e => handleProjectTitleChange(e.target.value)} /></div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Slug</label>
+                  <input
+                    className={inp}
+                    placeholder="project-url-slug"
+                    value={currentItem.slug || ''}
+                    onChange={e => handleProjectSlugChange(e.target.value)}
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">Auto-created from title, you can edit it. Used in share URL.</p>
+                </div>
                 <div><label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label>
                   <select required className={inp} value={currentItem.category || ''} onChange={e => setCurrentItem({...currentItem, category: e.target.value})}>
                     <option value="">Select category</option>
